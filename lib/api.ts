@@ -2,12 +2,21 @@
 
 // Get API URL - works in both client and server
 export function getApiUrl(): string {
-  if (typeof window !== 'undefined') {
-    // Client-side: use environment variable or default
-    return (window as any).__API_URL__ || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  // If NEXT_PUBLIC_API_URL is set, use it
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (apiUrl) {
+    return apiUrl;
   }
-  // Server-side
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  
+  // In production (Render), use relative URLs since Express serves both frontend and API
+  if (typeof window !== 'undefined') {
+    // Client-side: use relative URL (same origin)
+    return '';
+  }
+  
+  // Server-side fallback (shouldn't happen with static export, but just in case)
+  return 'http://localhost:3001';
 }
 
 export async function apiCall(

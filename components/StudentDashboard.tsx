@@ -18,14 +18,14 @@ export default function StudentDashboard({ user }: { user: any }) {
     }
 
     // Fetch progress
-    fetch('http://localhost:3001/api/progress/my-progress', {
+    fetch('/api/progress/my-progress', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
       .then(data => setProgress(data));
 
     // Fetch detailed progress
-    fetch('http://localhost:3001/api/progress/my-progress/detailed', {
+    fetch('/api/progress/my-progress/detailed', {
       headers: { 'Authorization': `Bearer ${token}` }
     })
       .then(res => res.json())
