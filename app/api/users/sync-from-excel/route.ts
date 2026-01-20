@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getInternalApiUrl } from '@/lib/api';
 
 export async function POST(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    const API_URL = getInternalApiUrl();
     const response = await fetch(`${API_URL}/api/users/sync-from-excel`, {
       method: 'POST',
       headers: {

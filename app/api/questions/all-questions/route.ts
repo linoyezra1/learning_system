@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getInternalApiUrl } from '@/lib/api';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const API_URL = getInternalApiUrl();
     let url = `${API_URL}/api/questions/all-questions`;
     if (status) {
       url += `?status=${status}`;

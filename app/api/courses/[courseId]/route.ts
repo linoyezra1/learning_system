@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getInternalApiUrl } from '@/lib/api';
 
-const API_URL = getInternalApiUrl();
-
 export async function GET(
   request: NextRequest,
   { params }: { params: { courseId: string } }
@@ -15,6 +13,7 @@ export async function GET(
   }
 
   try {
+    const API_URL = getInternalApiUrl();
     const response = await fetch(`${API_URL}/api/courses/${params.courseId}`, {
       method: 'GET',
       headers: {

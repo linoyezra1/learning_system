@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getInternalApiUrl } from '@/lib/api';
 
 export async function POST(
   request: NextRequest,
@@ -14,6 +14,7 @@ export async function POST(
 
   try {
     const body = await request.json();
+    const API_URL = getInternalApiUrl();
 
     const response = await fetch(`${API_URL}/api/questions/${params.questionId}/answer`, {
       method: 'POST',

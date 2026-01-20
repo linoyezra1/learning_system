@@ -28,11 +28,13 @@ export function getApiUrl(): string {
   if (serverApiUrl) return serverApiUrl;
 
   // Server-side fallback: use PORT if set (Render), otherwise 3001 (local Express)
+  // This runs at runtime, so PORT will be available in Render
   const port = process.env.PORT || '3001';
   return `http://127.0.0.1:${port}`;
 }
 
 // For Next.js Route Handlers (server-only) where we need an absolute URL to reach the backend API.
+// IMPORTANT: This must be called inside route handlers, not at module level, to ensure PORT is available at runtime
 export function getInternalApiUrl(): string {
   return getApiUrl();
 }

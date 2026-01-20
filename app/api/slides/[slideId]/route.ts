@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+import { getInternalApiUrl } from '@/lib/api';
 
 export async function GET(
   request: NextRequest,
@@ -13,6 +13,7 @@ export async function GET(
   }
 
   try {
+    const API_URL = getInternalApiUrl();
     const response = await fetch(`${API_URL}/api/slides/${params.slideId}`, {
       method: 'GET',
       headers: {

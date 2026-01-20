@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getInternalApiUrl } from '@/lib/api';
 
-const API_URL = getInternalApiUrl();
-
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
 
@@ -12,6 +10,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const API_URL = getInternalApiUrl();
     const response = await fetch(`${API_URL}/api/auth/verify`, {
       method: 'GET',
       headers: {
