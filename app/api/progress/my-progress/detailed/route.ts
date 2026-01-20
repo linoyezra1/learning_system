@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${API_URL}/api/progress/all`, {
+    const response = await fetch(`${API_URL}/api/progress/my-progress/detailed`, {
       method: 'GET',
       headers: {
         'Authorization': authHeader,
@@ -22,10 +22,8 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
   } catch (error) {
-    console.error('Error fetching all progress:', error);
+    console.error('Error fetching detailed progress:', error);
     return NextResponse.json({ error: 'שגיאה בחיבור לשרת' }, { status: 500 });
   }
 }
-
-
 
