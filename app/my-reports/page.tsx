@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiUrl } from '@/lib/api';
 
 export default function MyReportsPage() {
   const router = useRouter();
@@ -20,8 +21,9 @@ export default function MyReportsPage() {
     if (userStr) {
       const userData = JSON.parse(userStr);
       setUser(userData);
+      const apiUrl = getApiUrl();
 
-      fetch(`http://localhost:3001/api/reports/user/${userData.id}`, {
+      fetch(`${apiUrl}/api/reports/user/${userData.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       })
         .then(res => res.json())
@@ -36,7 +38,8 @@ export default function MyReportsPage() {
     if (!user) return;
 
     const token = localStorage.getItem('token');
-    const response = await fetch(`http://localhost:3001/api/reports/completion/${user.id}`, {
+    const apiUrl = getApiUrl();
+    const response = await fetch(`${apiUrl}/api/reports/completion/${user.id}`, {
       headers: { 'Authorization': `Bearer ${token}` }
     });
 
@@ -49,7 +52,7 @@ export default function MyReportsPage() {
       a.click();
       
       // Reload reports
-      const reportsRes = await fetch(`http://localhost:3001/api/reports/user/${user.id}`, {
+      const reportsRes = await fetch(`${apiUrl}/api/reports/user/${user.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const reportsData = await reportsRes.json();
@@ -106,7 +109,8 @@ export default function MyReportsPage() {
                     <button
                       onClick={() => {
                         const token = localStorage.getItem('token');
-                        fetch(`http://localhost:3001/api/reports/completion/${user?.id}`, {
+                        const apiUrl = getApiUrl();
+                        fetch(`${apiUrl}/api/reports/completion/${user?.id}`, {
                           headers: { 'Authorization': `Bearer ${token}` }
                         })
                           .then(res => res.blob())
