@@ -141,13 +141,74 @@ function initializeDatabase() {
     UNIQUE(user_id, course_id)
   )`);
 
-  // Note: Default admin user will be created by init-db.js script with proper bcrypt hash
-
   // Create default course
   db.run(`INSERT OR IGNORE INTO courses (id, title, description) 
     VALUES (1, 'קורס עזרה ראשונה - חוברת 44', 'קורס מקיף בעזרה ראשונה לפי חוברת 44')`, (err) => {
     if (!err) {
       console.log('Database initialized successfully');
+      // Create default users if they don't exist
+      createDefaultUsers();
+    }
+  });
+}
+
+// Create default users (admin and student1) if they don't exist
+function createDefaultUsers() {
+  const bcrypt = require('bcryptjs');
+  
+  // Check if admin exists and create if not
+  db.get('SELECT id FROM users WHERE username = ?', ['admin'], (err, row) => {
+    if (err) {
+      console.error('Error checking admin user:', err);
+      return;
+    }
+    
+    if (!row) {
+      // Create admin user
+      bcrypt.hash('admin123', 10).then(adminPassword => {
+        db.run(
+          `INSERT OR IGNORE INTO users (id, username, password, full_name, role) 
+           VALUES (1, 'admin', ?, 'מנהל המערכת', 'admin')`,
+          [adminPassword],
+          (err) => {
+            if (err) {
+              console.error('Error creating admin user:', err);
+            } else {
+              console.log('Default admin user created: username=admin, password=admin123');
+            }
+          }
+        );
+      }).catch(err => {
+        console.error('Error hashing admin password:', err);
+      });
+    }
+  });
+  
+  // Check if student1 exists and create if not
+  db.get('SELECT id FROM users WHERE username = ?', ['student1'], (err, row) => {
+    if (err) {
+      console.error('Error checking student user:', err);
+      return;
+    }
+    
+    if (!row) {
+      // Create student user
+      bcrypt.hash('student123', 10).then(studentPassword => {
+        db.run(
+          `INSERT OR IGNORE INTO users (username, password, full_name, role) 
+           VALUES ('student1', ?, 'סטודנט לדוגמה', 'student')`,
+          [studentPassword],
+          (err) => {
+            if (err) {
+              console.error('Error creating student user:', err);
+            } else {
+              console.log('Default student user created: username=student1, password=student123');
+            }
+          }
+        );
+      }).catch(err => {
+        console.error('Error hashing student password:', err);
+      });
     }
   });
 }
