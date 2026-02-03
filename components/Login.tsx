@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getApiUrl } from '@/lib/api';
 
 export default function Login() {
   const router = useRouter();
@@ -17,7 +16,9 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const apiUrl = getApiUrl();
+      const apiUrl = typeof window !== 'undefined' 
+        ? (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001')
+        : 'http://localhost:3001';
       const response = await fetch(`${apiUrl}/api/auth/login`, {
         method: 'POST',
         headers: {

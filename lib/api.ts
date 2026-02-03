@@ -2,41 +2,42 @@
 
 // Get API URL - works in both client and server
 export function getApiUrl(): string {
-  // If NEXT_PUBLIC_API_URL is set, use it (works for both local and production)
+  // If NEXT_PUBLIC_API_URL is set, use it
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   
   if (apiUrl) {
     return apiUrl;
   }
   
-  // Client-side: check if we're in production (Render) where Express serves both frontend and API
+  // In production (Render), use relative URLs since Express serves both frontend and API
   if (typeof window !== 'undefined') {
-    // In production on Render, Express serves both frontend and API on same port, so relative URL works
-    // In local dev, Next.js (3000) and Express (3001) are separate, so we need absolute URL
-    const isProduction = process.env.NODE_ENV === 'production';
-    if (isProduction) {
-      // Production: use relative URL (same origin - Express serves both)
-      return '';
-    } else {
-      // Local dev: Next.js on 3000, Express on 3001 - need absolute URL
-      return 'http://localhost:3001';
-    }
+    // Client-side: use relative URL (same origin)
+    return '';
   }
   
-  // Server-side (Next.js API routes): prefer an explicitly configured backend URL
-  const serverApiUrl = process.env.API_URL;
-  if (serverApiUrl) return serverApiUrl;
-
-  // Server-side fallback: use PORT if set (Render), otherwise 3001 (local Express)
-  // This runs at runtime, so PORT will be available in Render
-  const port = process.env.PORT || '3001';
-  return `http://127.0.0.1:${port}`;
+  // Server-side fallback (shouldn't happen with static export, but just in case)
+  return 'http://localhost:3001';
 }
 
-// For Next.js Route Handlers (server-only) where we need an absolute URL to reach the backend API.
-// IMPORTANT: This must be called inside route handlers, not at module level, to ensure PORT is available at runtime
+// Get internal API URL for server-side Next.js API routes
+// This is used when Next.js API routes need to call the Express backend
 export function getInternalApiUrl(): string {
-  return getApiUrl();
+  // If INTERNAL_API_URL is set (for production), use it
+  const internalApiUrl = process.env.INTERNAL_API_URL;
+  if (internalApiUrl) {
+    return internalApiUrl;
+  }
+  
+  // In production on Render, Express serves both frontend and API on same port
+  // So we use relative URL or localhost
+  if (process.env.NODE_ENV === 'production') {
+    // On Render, the Express server runs on the same port, so use localhost
+    const port = process.env.PORT || '3001';
+    return `http://localhost:${port}`;
+  }
+  
+  // Development: Express runs on port 3001
+  return 'http://localhost:3001';
 }
 
 export async function apiCall(

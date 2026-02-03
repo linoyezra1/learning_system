@@ -19,13 +19,20 @@ export default function DashboardPage() {
     }
 
     const apiUrl = getApiUrl();
+    
+    // Create AbortController for timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds timeout
+
     fetch(`${apiUrl}/api/auth/verify`, {
       headers: {
         'Authorization': `Bearer ${token}`
-      }
+      },
+      signal: controller.signal,
     })
       .then(res => res.json())
       .then(data => {
+        clearTimeout(timeoutId);
         if (data.error) {
           localStorage.removeItem('token');
           router.push('/');
@@ -34,7 +41,9 @@ export default function DashboardPage() {
           setLoading(false);
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        clearTimeout(timeoutId);
+        console.error('Error verifying token:', err);
         localStorage.removeItem('token');
         router.push('/');
       });

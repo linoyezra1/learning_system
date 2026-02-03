@@ -11,17 +11,35 @@ export async function GET(request: NextRequest) {
 
   try {
     const API_URL = getInternalApiUrl();
+    
+    // Create AbortController for timeout (30 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(`${API_URL}/api/progress/my-progress`, {
       method: 'GET',
       headers: {
         'Authorization': authHeader,
       },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: 'שגיאה בטעינת התקדמות' }));
+      return NextResponse.json(errorData, { status: response.status });
+    }
 
     const data = await response.json();
     return NextResponse.json(data, { status: response.status });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching my progress:', error);
+    
+    if (error.name === 'AbortError') {
+      return NextResponse.json({ error: 'שגיאה: השרת לא הגיב בזמן' }, { status: 504 });
+    }
+    
     return NextResponse.json({ error: 'שגיאה בחיבור לשרת' }, { status: 500 });
   }
 }
