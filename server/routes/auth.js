@@ -9,36 +9,44 @@ const router = express.Router();
 // Login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
+  
+  console.log('--- ניסיון התחברות ---');
+  console.log('שם משתמש שהוזן:', username);
 
   if (!username || !password) {
     return res.status(400).json({ error: 'נא להזין שם משתמש וסיסמה' });
   }
 
-  // Trim username to match how it's stored from Excel
   const trimmedUsername = String(username || '').trim().toLowerCase();
 
-  if (!trimmedUsername) {
-    return res.status(400).json({ error: 'נא להזין שם משתמש תקין' });
-  }
-
+  // שימי לב: השאילתה מותאמת לשמות ב-Postgres
   db.get(
     'SELECT * FROM users WHERE LOWER(TRIM(username)) = ?',
     [trimmedUsername],
     async (err, user) => {
       if (err) {
+        console.error('שגיאת בסיס נתונים:', err);
         return res.status(500).json({ error: 'שגיאה בבסיס הנתונים' });
       }
 
       if (!user) {
+        console.log('תוצאה: המשתמש לא נמצא בטבלה');
         return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
       }
 
+      console.log('תוצאה: המשתמש נמצא, בודק סיסמה...');
+      
+      // השוואת הסיסמה שהוזנה לסיסמה המוצפנת בבסיס הנתונים
       const validPassword = await bcrypt.compare(password, user.password);
+      
       if (!validPassword) {
+        console.log('תוצאה: הסיסמה לא תואמת');
         return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
       }
 
-      // Update last login
+      console.log('תוצאה: התחברות הצליחה עבור:', user.username);
+
+      // עדכון כניסה אחרונה (אם העמודה קיימת, אם לא - זה פשוט לא יעשה כלום)
       db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
       const token = jwt.sign(
@@ -52,7 +60,7 @@ router.post('/login', (req, res) => {
         user: {
           id: user.id,
           username: user.username,
-          fullName: user.full_name,
+          fullName: user.full_name || user.username, // מגבה למקרה שאין full_name
           role: user.role
         }
       });
@@ -60,7 +68,7 @@ router.post('/login', (req, res) => {
   );
 });
 
-// Register (for testing - should be restricted in production)
+// Register
 router.post('/register', async (req, res) => {
   const { username, password, fullName, role = 'student' } = req.body;
 
@@ -68,13 +76,7 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ error: 'נא למלא את כל השדות הנדרשים' });
   }
 
-  // Trim username to match how it's stored from Excel
   const trimmedUsername = String(username || '').trim();
-
-  if (!trimmedUsername) {
-    return res.status(400).json({ error: 'נא להזין שם משתמש תקין' });
-  }
-
   const hashedPassword = await bcrypt.hash(password, 10);
 
   db.run(
@@ -82,9 +84,7 @@ router.post('/register', async (req, res) => {
     [trimmedUsername, hashedPassword, fullName, role],
     function(err) {
       if (err) {
-        if (err.message.includes('UNIQUE constraint failed')) {
-          return res.status(400).json({ error: 'שם המשתמש כבר קיים' });
-        }
+        console.error('שגיאה ברישום:', err);
         return res.status(500).json({ error: 'שגיאה ביצירת משתמש' });
       }
 
@@ -114,13 +114,9 @@ router.get('/verify', (req, res) => {
       if (err || !user) {
         return res.status(404).json({ error: 'משתמש לא נמצא' });
       }
-
       res.json({ user });
     });
   });
 });
 
 module.exports = router;
-
-
-
