@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
-// Exact filename as provided - do not change
-const HANDBOOK_FILENAME = 'חוברת לימוד עזרה ראשונה.pdf';
+// File on disk (English name to avoid encoding issues)
+const HANDBOOK_FILENAME = 'study-guide.pdf';
 
 export async function GET(request: NextRequest) {
   try {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="' + HANDBOOK_FILENAME + '"',
+        'Content-Disposition': 'attachment; filename="study-guide.pdf"',
       },
     });
   } catch (error) {

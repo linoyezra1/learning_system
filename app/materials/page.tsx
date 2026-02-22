@@ -3,9 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-// Exact filename - do not change. Used for display and download attribute.
-// For any URL that includes the filename (e.g. static file link), use encodeURIComponent(HANDBOOK_FILENAME) for mobile-safe URLs.
-const HANDBOOK_FILENAME = 'חוברת לימוד עזרה ראשונה.pdf';
+// File on disk and download filename (English to avoid encoding issues)
+const DOWNLOAD_FILENAME = 'study-guide.pdf';
 const DOWNLOAD_API = '/api/materials/download';
 
 export default function MaterialsPage() {
@@ -23,8 +22,8 @@ export default function MaterialsPage() {
     setMaterials([
       {
         id: 1,
-        title: HANDBOOK_FILENAME,
-        description: 'חוברת הקורס המלאה - קורס עזרה ראשונה',
+        title: 'חוברת הקורס המלאה',
+        description: 'חוברת לימוד - קורס עזרה ראשונה',
         type: 'pdf',
       },
     ]);
@@ -94,7 +93,7 @@ export default function MaterialsPage() {
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <a
                       href={DOWNLOAD_API}
-                      download={HANDBOOK_FILENAME}
+                      download={DOWNLOAD_FILENAME}
                       className="btn btn-primary"
                       style={{ textDecoration: 'none', color: 'inherit' }}
                     >

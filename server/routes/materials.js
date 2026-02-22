@@ -4,8 +4,8 @@ const fs = require('fs');
 
 const router = express.Router();
 
-// Exact filename as provided - do not change
-const HANDBOOK_FILENAME = 'חוברת לימוד עזרה ראשונה.pdf';
+// File on disk and Content-Disposition filename (English to avoid encoding issues)
+const HANDBOOK_FILENAME = 'study-guide.pdf';
 
 /**
  * GET /api/materials/download
@@ -31,7 +31,7 @@ router.get('/download', (req, res) => {
   }
 
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', 'attachment; filename="' + HANDBOOK_FILENAME + '"');
+  res.setHeader('Content-Disposition', 'attachment; filename="study-guide.pdf"');
   res.sendFile(filePath, (err) => {
     if (err) {
       console.error('Error sending handbook:', err);
