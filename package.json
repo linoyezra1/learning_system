@@ -14,7 +14,8 @@
     "add-content": "node server/scripts/add-sample-content.js",
     "add-full-content": "node server/scripts/add-full-content.js",
     "fill-content": "node server/scripts/add-full-content.js",
-    "create-excel": "node server/scripts/create-users-excel.js"
+    "create-excel": "node server/scripts/create-users-excel.js",
+    "sync-users": "node server/scripts/sync-users-from-excel.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

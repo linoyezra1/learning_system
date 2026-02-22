@@ -34,5 +34,7 @@ Or: Railway Dashboard → your project → Variables (ensure `DATABASE_URL` is s
   `node server/scripts/add-sample-content.js` or `npm run add-content`
 - **create-users-excel.js** – Creates `users.xlsx` (no DB).  
   `node server/scripts/create-users-excel.js` or `npm run create-excel`
+- **sync-users-from-excel.js** – Syncs students from `users.xlsx` into the DB (uses `.env` `DATABASE_URL`).  
+  `node server/scripts/sync-users-from-excel.js` or `npm run sync-users`
 
 All DB scripts require `DATABASE_URL` and use PostgreSQL syntax (`ON CONFLICT`, `RETURNING id`).
