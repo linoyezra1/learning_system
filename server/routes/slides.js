@@ -127,10 +127,10 @@ function updateUserProgressSummary(userId, callback) {
   db.get(
     `SELECT 
       COUNT(DISTINCT s.id)::int as total_slides,
-      COUNT(DISTINCT CASE WHEN (sp.completed = true OR sp.completed = 1) THEN sp.slide_id END)::int as completed_slides,
+      COUNT(DISTINCT CASE WHEN sp.completed = true THEN sp.slide_id END)::int as completed_slides,
       COALESCE(SUM(sp.time_spent), 0)::int as total_time
     FROM slides s
-    LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND (sp.completed = true OR sp.completed = 1)
+    LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND sp.completed = true
     WHERE s.module_id IN (SELECT id FROM modules WHERE course_id = ?)`,
     [userId, COURSE_ID],
     (err, result) => {

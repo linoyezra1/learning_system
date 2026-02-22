@@ -35,11 +35,11 @@ router.get('/completion/:userId', authenticateToken, requireRole(['instructor', 
           `SELECT 
             m.title as module_title,
             COUNT(DISTINCT s.id) as total_slides,
-            COUNT(DISTINCT CASE WHEN (sp.completed = true OR sp.completed = 1) THEN sp.slide_id END) as completed_slides,
+            COUNT(DISTINCT CASE WHEN sp.completed = true THEN sp.slide_id END) as completed_slides,
             SUM(sp.time_spent) as time_spent
           FROM modules m
           LEFT JOIN slides s ON m.id = s.module_id
-          LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND (sp.completed = true OR sp.completed = 1)
+          LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND sp.completed = true
           WHERE m.course_id = 1
           GROUP BY m.id, m.title
           ORDER BY m.order_index`,

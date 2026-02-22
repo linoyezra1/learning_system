@@ -69,7 +69,7 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
       m.id as module_id,
       m.title as module_title,
       COUNT(DISTINCT s.id) as total_slides,
-      COUNT(DISTINCT CASE WHEN (sp.completed = true OR sp.completed = 1) THEN sp.slide_id END) as completed_slides,
+      COUNT(DISTINCT CASE WHEN sp.completed = true THEN sp.slide_id END) as completed_slides,
       SUM(sp.time_spent) as time_spent
     FROM modules m
     LEFT JOIN slides s ON m.id = s.module_id
@@ -99,7 +99,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
       COALESCE(up.completed_slides, 0) as completed_slides,
       COALESCE(up.total_time_spent, 0) as total_time_spent,
       up.last_accessed,
-      ROUND((CAST(COALESCE(up.completed_slides, 0) AS FLOAT) / NULLIF((SELECT COUNT(*) FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1), 0)) * 100, 2) as completion_percentage
+      ROUND(((CAST(COALESCE(up.completed_slides, 0) AS FLOAT) / NULLIF((SELECT COUNT(*) FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1), 0)) * 100)::numeric, 2) as completion_percentage
     FROM users u
     LEFT JOIN user_progress up ON u.id = up.user_id AND up.course_id = 1
     WHERE LOWER(TRIM(u.role)) = 'student'
