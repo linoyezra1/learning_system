@@ -2,6 +2,11 @@
  * Standalone script: sync students from users.xlsx into the database.
  * Uses DATABASE_URL from .env (e.g. your Railway PostgreSQL).
  * Run from project root: node server/scripts/sync-users-from-excel.js
+ *
+ * Logic: Incremental upsert only. For each ROW in the Excel file:
+ *   - If username exists in DB → update (password, full_name, course_group_id).
+ *   - If username does NOT exist → create new user.
+ * Users who are in the DB but NOT in the Excel file are left unchanged. Partial files are valid.
  */
 const path = require('path');
 require('dotenv').config({ path: path.join(__dirname, '../../.env') });
@@ -70,8 +75,9 @@ async function run() {
           return;
         }
         if (existingUser) {
+          const fullName = row.full_name != null ? String(row.full_name).trim() : (existingUser.username || username);
           const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
-          db.run('UPDATE users SET password = ?, course_group_id = ? WHERE id = ?', [hashedPassword, courseGroupId, existingUser.id], function(updateErr) {
+          db.run('UPDATE users SET password = ?, full_name = ?, course_group_id = ? WHERE id = ?', [hashedPassword, fullName, courseGroupId, existingUser.id], function(updateErr) {
             if (updateErr) {
               errors.push(`Row ${i + 2}: update failed - ${updateErr.message}`);
             } else {

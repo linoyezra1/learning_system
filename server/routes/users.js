@@ -91,26 +91,24 @@ router.post('/', authenticateToken, requireRole(['instructor', 'admin']), async 
   );
 });
 
-// Update users from Excel file (instructor only)
+// Update users from Excel file (instructor only).
+// Incremental upsert: for each row in the file, update if username exists else insert. Users in DB but not in the file are left unchanged. Partial files are valid.
 router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 'admin']), upload.single('file'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'לא הועלה קובץ' });
   }
 
   try {
-    // Read Excel file
     const workbook = XLSX.readFile(req.file.path);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
 
-    // Validate structure
     if (data.length === 0) {
-      fs.unlinkSync(req.file.path); // Delete uploaded file
+      fs.unlinkSync(req.file.path);
       return res.status(400).json({ error: 'הקובץ ריק או לא מכיל נתונים' });
     }
 
-    // Check required columns
     const firstRow = data[0];
     if (!firstRow.hasOwnProperty('username') || !firstRow.hasOwnProperty('password')) {
       fs.unlinkSync(req.file.path);
@@ -123,7 +121,7 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
       errors: []
     };
 
-    // Process each row sequentially
+    // Process each row: upsert only (update or insert). Rows not in the file are never touched.
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       const username = String(row.username || '').trim();
@@ -157,10 +155,11 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
             }
 
             if (existingUser) {
+              const fullName = row.full_name != null ? String(row.full_name).trim() : (existingUser.username || username);
               const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'UPDATE users SET password = ?, course_group_id = ? WHERE id = ?',
-                [hashedPassword, courseGroupId, existingUser.id],
+                'UPDATE users SET password = ?, full_name = ?, course_group_id = ? WHERE id = ?',
+                [hashedPassword, fullName, courseGroupId, existingUser.id],
                 function(updateErr) {
                   if (updateErr) {
                     console.error(`Error updating user ${username}:`, updateErr);
@@ -203,7 +202,6 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
       }
     }
 
-    // Clean up uploaded file
     fs.unlinkSync(req.file.path);
 
     res.json({
@@ -225,28 +223,24 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
   }
 });
 
-// Get users from Excel file (read from users.xlsx in root)
+// Sync from users.xlsx in project root. Incremental upsert: only rows in the file are processed; users in DB but not in file are left unchanged. Partial files are valid.
 router.post('/sync-from-excel', authenticateToken, requireRole(['instructor', 'admin']), async (req, res) => {
   try {
     const excelPath = path.join(process.cwd(), 'users.xlsx');
 
-    // Check if file exists
     if (!fs.existsSync(excelPath)) {
       return res.status(404).json({ error: 'קובץ users.xlsx לא נמצא בתיקיית הפרויקט' });
     }
 
-    // Read Excel file
     const workbook = XLSX.readFile(excelPath);
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet);
 
-    // Validate structure
     if (data.length === 0) {
       return res.status(400).json({ error: 'הקובץ ריק או לא מכיל נתונים' });
     }
 
-    // Check required columns
     const firstRow = data[0];
     if (!firstRow.hasOwnProperty('username') || !firstRow.hasOwnProperty('password')) {
       return res.status(400).json({ error: 'הקובץ חייב להכיל עמודות: username ו-password' });
@@ -258,7 +252,7 @@ router.post('/sync-from-excel', authenticateToken, requireRole(['instructor', 'a
       errors: []
     };
 
-    // Process each row sequentially
+    // Process each row: upsert only (update or insert). Rows not in the file are never touched.
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
       const username = String(row.username || '').trim();
@@ -292,10 +286,11 @@ router.post('/sync-from-excel', authenticateToken, requireRole(['instructor', 'a
             }
 
             if (existingUser) {
+              const fullName = row.full_name != null ? String(row.full_name).trim() : (existingUser.username || username);
               const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'UPDATE users SET password = ?, course_group_id = ? WHERE id = ?',
-                [hashedPassword, courseGroupId, existingUser.id],
+                'UPDATE users SET password = ?, full_name = ?, course_group_id = ? WHERE id = ?',
+                [hashedPassword, fullName, courseGroupId, existingUser.id],
                 function(updateErr) {
                   if (updateErr) {
                     console.error(`Error updating user ${username}:`, updateErr);
