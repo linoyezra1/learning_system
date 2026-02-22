@@ -15,27 +15,45 @@ const emptyProgress = {
   completion_percentage: 0
 };
 
-// Get user's own progress
+// Get user's own progress (total_slides from slides table so student sees real count even before any progress)
 router.get('/my-progress', authenticateToken, (req, res) => {
   const userId = req.user.id;
 
   db.get(
-    `SELECT 
-      up.*,
-      c.title as course_title,
-      ROUND((CAST(up.completed_slides AS FLOAT) / NULLIF(up.total_slides, 0)) * 100, 2) as completion_percentage
-    FROM user_progress up
-    JOIN courses c ON up.course_id = c.id
-    WHERE up.user_id = ?`,
-    [userId],
-    (err, progress) => {
+    `SELECT COUNT(*)::int as total_slides
+     FROM slides s
+     JOIN modules m ON s.module_id = m.id
+     WHERE m.course_id = 1`,
+    [],
+    (err, countRow) => {
       if (err) {
-        if (isTableMissingError(err)) {
-          return res.json(emptyProgress);
-        }
+        if (isTableMissingError(err)) return res.json(emptyProgress);
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות' });
       }
-      res.json(progress || emptyProgress);
+      const totalSlides = (countRow && countRow.total_slides) ? countRow.total_slides : 0;
+
+      db.get(
+        `SELECT up.completed_slides, up.total_time_spent, c.title as course_title
+         FROM user_progress up
+         JOIN courses c ON up.course_id = c.id
+         WHERE up.user_id = ? AND up.course_id = 1`,
+        [userId],
+        (err2, progress) => {
+          if (err2 && !isTableMissingError(err2)) {
+            return res.status(500).json({ error: 'שגיאה בטעינת התקדמות' });
+          }
+          const completed = (progress && progress.completed_slides != null) ? progress.completed_slides : 0;
+          const timeSpent = (progress && progress.total_time_spent != null) ? progress.total_time_spent : 0;
+          const pct = totalSlides > 0 ? Math.round((Number(completed) / totalSlides) * 10000) / 100 : 0;
+          res.json({
+            total_slides: totalSlides,
+            completed_slides: completed,
+            total_time_spent: timeSpent,
+            completion_percentage: pct,
+            course_title: (progress && progress.course_title) || 'קורס עזרה ראשונה - חוברת 44'
+          });
+        }
+      );
     }
   );
 });
@@ -68,22 +86,22 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
   );
 });
 
-// Get all students' progress (instructor only)
+// Get all students' progress (instructor only); total_slides = course total from slides table
 router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req, res) => {
   db.all(
     `SELECT 
       u.id,
       u.username,
-      u.full_name,
-      up.total_slides,
-      up.completed_slides,
-      up.total_time_spent,
+      COALESCE(u.full_name, u.username) as full_name,
+      (SELECT COUNT(*)::int FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1) as total_slides,
+      COALESCE(up.completed_slides, 0) as completed_slides,
+      COALESCE(up.total_time_spent, 0) as total_time_spent,
       up.last_accessed,
-      ROUND((CAST(up.completed_slides AS FLOAT) / NULLIF(up.total_slides, 0)) * 100, 2) as completion_percentage
+      ROUND((CAST(COALESCE(up.completed_slides, 0) AS FLOAT) / NULLIF((SELECT COUNT(*) FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1), 0)) * 100, 2) as completion_percentage
     FROM users u
     LEFT JOIN user_progress up ON u.id = up.user_id AND up.course_id = 1
     WHERE u.role = 'student'
-    ORDER BY u.full_name`,
+    ORDER BY COALESCE(u.full_name, u.username), u.username`,
     (err, students) => {
       if (err) {
         if (isTableMissingError(err)) return res.json([]);
