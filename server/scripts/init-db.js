@@ -19,13 +19,13 @@ async function initDatabase() {
       });
     }
 
-    const adminPassword = await bcrypt.hash('admin123', 10);
+    const adminPassword = await bcrypt.hash('ezramedical1999', 10);
     await new Promise((resolve, reject) => {
       db.run(
         `INSERT INTO users (username, password, full_name, role)
          VALUES (?, ?, 'מנהל המערכת', 'admin')
          ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password, full_name = EXCLUDED.full_name`,
-        [adminPassword],
+        ['admin', adminPassword],
         (err) => (err ? reject(err) : resolve())
       );
     });
@@ -63,7 +63,7 @@ async function initDatabase() {
 
     console.log('Database initialized successfully!');
     console.log('Default credentials:');
-    console.log('Admin: username=admin, password=admin123');
+    console.log('Admin: username=admin, password=ezramedical1999');
     console.log('Student: username=student1, password=student123');
   } catch (err) {
     console.error('Error during init:', err);

@@ -28,7 +28,7 @@ Or: Railway Dashboard → your project → Variables (ensure `DATABASE_URL` is s
 
 ## Other scripts
 
-- **init-db.js** – Admin user (admin/admin123), sample student (student1/student123), course 1, and 7 modules.  
+- **init-db.js** – Admin user (admin/ezramedical1999), sample student (student1/student123), course 1, and 7 modules.  
   `node server/scripts/init-db.js` or `npm run init-db`
 - **add-sample-content.js** – Small sample of slides and questions.  
   `node server/scripts/add-sample-content.js` or `npm run add-content`

@@ -178,7 +178,7 @@ async function initializeDatabase() {
     console.log('[init] Table reports OK');
 
     console.log('[init] Upserting admin user...');
-    const hashedPw = await bcrypt.hash('admin123', 10);
+    const hashedPw = await bcrypt.hash('ezramedical1999', 10);
     await pool.query(
       `INSERT INTO users (username, password, role) VALUES ($1, $2, $3)
        ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password`,
