@@ -3,8 +3,8 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const next = require('next');
-const { Pool } = require('pg'); // הוספת חיבור ל-Postgres
-const bcrypt = require('bcrypt'); // הוספת הצפנה לסיסמה
+const { Pool } = require('pg'); 
+const bcrypt = require('bcryptjs'); // <--- התיקון כאן: הוספתי js בסוף
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -30,13 +30,13 @@ app.use(express.urlencoded({ extended: true }));
 async function initializeDatabase() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // נדרש ברוב שרתי הענן
+    ssl: { rejectUnauthorized: false } 
   });
 
   try {
     console.log('--- Database Initialization Started ---');
     
-    // 1. יצירת טבלת משתמשים אם היא לא קיימת (ודאי ששמות העמודות תואמים לקוד שלך)
+    // 1. יצירת טבלת משתמשים אם היא לא קיימת
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -53,7 +53,8 @@ async function initializeDatabase() {
     
     if (checkAdmin.rowCount === 0) {
       // 3. יצירת סיסמה מוצפנת למנהל (admin123)
-      const hashedPw = await bcrypt.hash('admin123', 10);
+      // התיקון כאן: bcryptjs עובד בדיוק אותו דבר
+      const hashedPw = await bcrypt.hash('admin123', 10); 
       await pool.query(
         "INSERT INTO users (username, password, role) VALUES ($1, $2, $3)",
         ['admin', hashedPw, 'admin']
@@ -103,7 +104,6 @@ app.all('*', (req, res) => {
 nextApp
   .prepare()
   .then(async () => {
-    // הרצת האתחול לפני הפעלת השרת
     if (process.env.DATABASE_URL) {
       await initializeDatabase();
     }
