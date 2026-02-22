@@ -1,7 +1,13 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const db = require('../config/database');
 const bcrypt = require('bcryptjs');
 const path = require('path');
 const fs = require('fs');
+
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is not set. Set it in .env or your environment (e.g. Railway).');
+  process.exit(1);
+}
 
 // Helper function to calculate minimum reading time (words per minute = 200, add buffer)
 function calculateReadingTime(text) {
@@ -42,13 +48,17 @@ async function addFullContent() {
   console.log('מתחיל להוסיף תוכן מלא מחוברת 44...');
   console.log('');
 
-  // Wait for database initialization
+  // Wait for database to be reachable
   await new Promise(resolve => setTimeout(resolve, 500));
 
-  // Get course and modules
-  const course = await dbGet('SELECT id FROM courses WHERE id = 1');
+  // Ensure course 1 exists (create if missing, e.g. fresh Railway DB)
+  let course = await dbGet('SELECT id FROM courses WHERE id = 1');
   if (!course) {
-    console.error('קורס לא נמצא!');
+    await dbRun('INSERT INTO courses (title, description) VALUES (?, ?)', ['קורס עזרה ראשונה - חוברת 44', '']);
+    course = await dbGet('SELECT id FROM courses WHERE id = 1');
+  }
+  if (!course) {
+    console.error('קורס לא נמצא ולא נוצר. וודא שהטבלאות נוצרו (הפעל את השרת פעם אחת).');
     process.exit(1);
   }
 
@@ -57,7 +67,7 @@ async function addFullContent() {
   // Module 1: יסודות עזרה ראשונה
   let module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%יסודות%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 1)', ['יסודות עזרה ראשונה']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 1) RETURNING id', ['יסודות עזרה ראשונה']);
     module = { id: moduleId, title: 'יסודות עזרה ראשונה' };
   }
 
@@ -65,8 +75,9 @@ async function addFullContent() {
 
   // Slide 1: מהי עזרה ראשונה
   let slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'מהי עזרה ראשונה?',
@@ -94,8 +105,9 @@ async function addFullContent() {
 
   // Question for slide 1
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מהי עזרה ראשונה?',
@@ -112,8 +124,9 @@ async function addFullContent() {
 
   // Slide 2: משולש החיים
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'משולש החיים',
@@ -144,8 +157,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מהו משולש החיים?',
@@ -162,8 +176,9 @@ async function addFullContent() {
 
   // Slide 3: המוח - מרכז השליטה של הגוף
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 3)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 3)
+     RETURNING id`,
     [
       module.id,
       'המוח – מרכז השליטה של הגוף',
@@ -193,8 +208,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'כמה אחוז מכלל צריכת החמצן של הגוף צורך המוח?',
@@ -212,7 +228,7 @@ async function addFullContent() {
   // Module 2: הערכת מצב
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%הערכת מצב%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 2)', ['הערכת מצב']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 2) RETURNING id', ['הערכת מצב']);
     module = { id: moduleId, title: 'הערכת מצב' };
   }
 
@@ -220,8 +236,9 @@ async function addFullContent() {
 
   // Slide 1: סיווג רמות הכרה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'סיווג רמות הכרה',
@@ -257,8 +274,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה מסמל האות A בשיטת AVPU?',
@@ -275,8 +293,9 @@ async function addFullContent() {
 
   // Slide 2: מדדים חיוניים
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'מדדים חיוניים',
@@ -313,8 +332,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מהו מספר הנשימות התקין לדקה למבוגר?',
@@ -332,7 +352,7 @@ async function addFullContent() {
   // Module 3: החייאה
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%החייאה%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 3)', ['החייאה']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 3) RETURNING id', ['החייאה']);
     module = { id: moduleId, title: 'החייאה' };
   }
 
@@ -340,8 +360,9 @@ async function addFullContent() {
 
   // Slide 1: החייאה למבוגר - סכמת החייאה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'החייאה למבוגר - סכמת החייאה',
@@ -378,8 +399,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מהו היחס בין לחיצות חזה להנשמות בהחייאה למבוגר?',
@@ -396,8 +418,9 @@ async function addFullContent() {
 
   // Slide 2: החייאת ילד
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'החייאת ילד',
@@ -436,8 +459,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מהו היחס בין לחיצות חזה להנשמות בהחייאת ילד (גיל 1-8 שנים)?',
@@ -454,8 +478,9 @@ async function addFullContent() {
 
   // Slide 3: החייאת תינוקות
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 3)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 3)
+     RETURNING id`,
     [
       module.id,
       'החייאת תינוקות',
@@ -507,8 +532,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'איך מבצעים לחיצות חזה בהחייאת תינוק?',
@@ -525,8 +551,9 @@ async function addFullContent() {
 
   // Slide 4: דפיברילטור (AED)
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 4)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 4)
+     RETURNING id`,
     [
       module.id,
       'דפיברילטור (AED)',
@@ -580,8 +607,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות לפני שימוש בדפיברילטור על נפגע רטוב?',
@@ -599,7 +627,7 @@ async function addFullContent() {
   // Module 4: מצבי חירום נשימתיים
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%נשימתיים%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 4)', ['מצבי חירום נשימתיים']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 4) RETURNING id', ['מצבי חירום נשימתיים']);
     module = { id: moduleId, title: 'מצבי חירום נשימתיים' };
   }
 
@@ -607,8 +635,9 @@ async function addFullContent() {
 
   // Slide 1: חנק מגוף זר
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'חנק מגוף זר',
@@ -665,8 +694,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה הסדר הנכון לטיפול בחנק במבוגר בהכרה?',
@@ -683,8 +713,9 @@ async function addFullContent() {
 
   // Slide 2: אסתמה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'אסתמה',
@@ -730,8 +761,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות תחילה בהתקף אסתמה?',
@@ -749,7 +781,7 @@ async function addFullContent() {
   // Module 5: מצבי חירום רפואיים
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%רפואיים%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 5)', ['מצבי חירום רפואיים']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 5) RETURNING id', ['מצבי חירום רפואיים']);
     module = { id: moduleId, title: 'מצבי חירום רפואיים' };
   }
 
@@ -757,8 +789,9 @@ async function addFullContent() {
 
   // Slide 1: עילפון
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'עילפון',
@@ -820,8 +853,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות עם נפגע מחוסר הכרה שעילף ונושם?',
@@ -838,8 +872,9 @@ async function addFullContent() {
 
   // Slide 2: אלרגיה ושוק אנפילקטי
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'אלרגיה ושוק אנפילקטי',
@@ -877,8 +912,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות ראשון בשוק אנפילקטי?',
@@ -895,8 +931,9 @@ async function addFullContent() {
 
   // Slide 3: הרעלות
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 3)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 3)
+     RETURNING id`,
     [
       module.id,
       'הרעלות',
@@ -964,8 +1001,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות בהרעלת בליעה?',
@@ -982,8 +1020,9 @@ async function addFullContent() {
 
   // Slide 4: אוטם בשריר הלב
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 4)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 4)
+     RETURNING id`,
     [
       module.id,
       'אוטם בשריר הלב (התקף לב)',
@@ -1025,8 +1064,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה הסימן העיקרי של התקף לב?',
@@ -1043,8 +1083,9 @@ async function addFullContent() {
 
   // Slide 5: סוכרת והיפוגליקמיה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 5)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 5)
+     RETURNING id`,
     [
       module.id,
       'סוכרת והיפוגליקמיה',
@@ -1090,8 +1131,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לתת לנפגע בהכרה עם היפוגליקמיה?',
@@ -1108,8 +1150,9 @@ async function addFullContent() {
 
   // Slide 6: שבץ מוחי
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 6)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 6)
+     RETURNING id`,
     [
       module.id,
       'שבץ מוחי',
@@ -1155,8 +1198,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה מסמל האות F בשיטת FAST לזיהוי שבץ מוחי?',
@@ -1173,8 +1217,9 @@ async function addFullContent() {
 
   // Slide 7: פרכוסים
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 7)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 7)
+     RETURNING id`,
     [
       module.id,
       'פרכוסים',
@@ -1219,8 +1264,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה לא צריך לעשות במהלך פרכוס?',
@@ -1238,7 +1284,7 @@ async function addFullContent() {
   // Module 6: מצבי סביבה
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%סביבה%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 6)', ['מצבי סביבה']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 6) RETURNING id', ['מצבי סביבה']);
     module = { id: moduleId, title: 'מצבי סביבה' };
   }
 
@@ -1246,8 +1292,9 @@ async function addFullContent() {
 
   // Slide 1: התייבשות
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'התייבשות',
@@ -1287,8 +1334,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה הסימן הראשון של התייבשות?',
@@ -1305,8 +1353,9 @@ async function addFullContent() {
 
   // Slide 2: היפותרמיה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'היפותרמיה (היפותרמיה)',
@@ -1344,8 +1393,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות תחילה בהיפותרמיה?',
@@ -1362,8 +1412,9 @@ async function addFullContent() {
 
   // Slide 3: הכשת נחש
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 3)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 3)
+     RETURNING id`,
     [
       module.id,
       'הכשת נחש',
@@ -1415,8 +1466,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות עם איבר מוכש נחש?',
@@ -1434,7 +1486,7 @@ async function addFullContent() {
   // Module 7: טראומה
   module = await dbGet('SELECT * FROM modules WHERE course_id = 1 AND title LIKE ?', ['%טראומה%']);
   if (!module) {
-    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 7)', ['טראומה']);
+    const moduleId = await dbRun('INSERT INTO modules (course_id, title, order_index) VALUES (1, ?, 7) RETURNING id', ['טראומה']);
     module = { id: moduleId, title: 'טראומה' };
   }
 
@@ -1442,8 +1494,9 @@ async function addFullContent() {
 
   // Slide 1: מבוא לטראומה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 1)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 1)
+     RETURNING id`,
     [
       module.id,
       'מבוא לטראומה',
@@ -1480,8 +1533,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה הסדר הנכון בטיפול בטראומה?',
@@ -1498,8 +1552,9 @@ async function addFullContent() {
 
   // Slide 2: פגיעות ראש
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 2)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 2)
+     RETURNING id`,
     [
       module.id,
       'פגיעות ראש',
@@ -1540,8 +1595,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות אם יש נוזל שקוף מהאוזן אחרי פגיעת ראש?',
@@ -1558,8 +1614,9 @@ async function addFullContent() {
 
   // Slide 3: חבלה בעמוד שדרה
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 3)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 3)
+     RETURNING id`,
     [
       module.id,
       'חבלה בעמוד שדרה',
@@ -1605,8 +1662,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות עם נפגע שחושד שיש לו חבלת עמוד שדרה?',
@@ -1623,8 +1681,9 @@ async function addFullContent() {
 
   // Slide 4: שברים בגפיים
   slideId = await dbRun(
-    `INSERT OR REPLACE INTO slides (module_id, title, content, min_reading_time, order_index) 
-     VALUES (?, ?, ?, ?, 4)`,
+    `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+     VALUES (?, ?, ?, ?, 4)
+     RETURNING id`,
     [
       module.id,
       'שברים בגפיים',
@@ -1678,8 +1737,9 @@ async function addFullContent() {
   );
 
   await dbRun(
-    `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-     VALUES (?, ?, ?, ?, ?)`,
+    `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+     VALUES (?, ?, ?, ?, ?)
+     ON CONFLICT DO NOTHING`,
     [
       slideId,
       'מה צריך לעשות בשבר פתוח (כאשר העצם בולטת)?',

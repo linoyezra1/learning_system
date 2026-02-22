@@ -50,6 +50,11 @@ const db = {
     pool.query(pgSql, actualParams, (err, res) => {
       if (actualCallback) actualCallback(err, res ? res.rows : []);
     });
+  },
+
+  // For standalone scripts: end the pool so process can exit cleanly
+  close: (callback) => {
+    pool.end(callback || (() => {}));
   }
 };
 

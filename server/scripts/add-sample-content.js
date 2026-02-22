@@ -1,30 +1,34 @@
+require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 const db = require('../config/database');
 
-// Sample content based on the handbook
-async function addSampleContent() {
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is not set. Set it in .env or your environment.');
+  process.exit(1);
+}
+
+function addSampleContent() {
   console.log('Adding sample content...');
 
-  // Get course ID
-  db.get('SELECT id FROM courses WHERE id = 1', (err, course) => {
+  db.get('SELECT id FROM courses WHERE id = 1', [], (err, course) => {
     if (err || !course) {
-      console.error('Course not found');
-      process.exit(1);
+      console.error('Course not found. Run server once to create tables, or run init-db.js first.');
+      db.close(() => process.exit(1));
+      return;
     }
 
-    // Get modules
-    db.all('SELECT * FROM modules WHERE course_id = 1 ORDER BY order_index', (err, modules) => {
+    db.all('SELECT * FROM modules WHERE course_id = 1 ORDER BY order_index', [], (err, modules) => {
       if (err || !modules.length) {
-        console.error('Modules not found');
-        process.exit(1);
+        console.error('Modules not found. Run init-db.js first.');
+        db.close(() => process.exit(1));
+        return;
       }
 
-      // Module 1: יסודות עזרה ראשונה
       const module1 = modules.find(m => m.title.includes('יסודות'));
       if (module1) {
-        // Slide 1: מהי עזרה ראשונה
         db.run(
-          `INSERT OR IGNORE INTO slides (module_id, title, content, min_reading_time, order_index) 
-           VALUES (?, ?, ?, 30, 1)`,
+          `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+           VALUES (?, ?, ?, 30, 1)
+           ON CONFLICT DO NOTHING`,
           [
             module1.id,
             'מהי עזרה ראשונה?',
@@ -41,10 +45,10 @@ async function addSampleContent() {
           ]
         );
 
-        // Slide 2: משולש החיים
         db.run(
-          `INSERT OR IGNORE INTO slides (module_id, title, content, min_reading_time, order_index) 
-           VALUES (?, ?, ?, 40, 2)`,
+          `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+           VALUES (?, ?, ?, 40, 2)
+           ON CONFLICT DO NOTHING`,
           [
             module1.id,
             'משולש החיים',
@@ -61,10 +65,10 @@ async function addSampleContent() {
           ]
         );
 
-        // Add practice question
         db.run(
-          `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
           [
             module1.id,
             'מהו משולש החיים?',
@@ -80,12 +84,12 @@ async function addSampleContent() {
         );
       }
 
-      // Module 3: החייאה
       const module3 = modules.find(m => m.title.includes('החייאה'));
       if (module3) {
         db.run(
-          `INSERT OR IGNORE INTO slides (module_id, title, content, min_reading_time, order_index) 
-           VALUES (?, ?, ?, 60, 1)`,
+          `INSERT INTO slides (module_id, title, content, min_reading_time, order_index)
+           VALUES (?, ?, ?, 60, 1)
+           ON CONFLICT DO NOTHING`,
           [
             module3.id,
             'החייאה למבוגר',
@@ -109,8 +113,9 @@ async function addSampleContent() {
         );
 
         db.run(
-          `INSERT OR IGNORE INTO practice_questions (slide_id, question, options, correct_answer, explanation) 
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO practice_questions (slide_id, question, options, correct_answer, explanation)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT DO NOTHING`,
           [
             module3.id,
             'מהו היחס בין לחיצות חזה להנשמות בהחייאה למבוגר?',
@@ -127,15 +132,9 @@ async function addSampleContent() {
       }
 
       console.log('Sample content added successfully!');
-      process.exit(0);
+      db.close(() => process.exit(0));
     });
   });
 }
 
 addSampleContent();
-
-
-
-
-
-
