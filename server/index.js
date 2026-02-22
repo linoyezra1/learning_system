@@ -26,7 +26,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// פונקציית עזר ליצירת המנהל הראשון ב-PostgreSQL
+// פונקציית עזר לאתחול בסיס הנתונים ואיפוס סיסמת מנהל
 async function initializeDatabase() {
   const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
@@ -36,35 +36,33 @@ async function initializeDatabase() {
   try {
     console.log('--- Database Initialization Started ---');
     
-    // 1. יצירת טבלת משתמשים עם השמות המדויקים שהקוד שלך מחפש (full_name, last_login)
+    // 1. יצירת הטבלה אם אינה קיימת (מותאם לשדות שיש לך ב-Railway)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        full_name VARCHAR(255),
         role VARCHAR(50) DEFAULT 'student',
-        last_login TIMESTAMP,
         "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
-    // 2. בדיקה אם קיים משתמש admin
-    const checkAdmin = await pool.query("SELECT * FROM users WHERE LOWER(TRIM(username)) = 'admin'");
+    // 2. יצירת סיסמה מוצפנת תקנית (admin123)
+    const hashedPw = await bcrypt.hash('admin123', 10); 
     
-    if (checkAdmin.rowCount === 0) {
-      // 3. יצירת סיסמה מוצפנת למנהל (admin123)
-      const hashedPw = await bcrypt.hash('admin123', 10); 
-      await pool.query(
-        "INSERT INTO users (username, password, full_name, role) VALUES ($1, $2, $3, $4)",
-        ['admin', hashedPw, 'מנהל מערכת', 'admin']
-      );
-      console.log('✅ Success: Admin user created (admin / admin123)');
-    } else {
-      console.log('ℹ️ Info: Admin user already exists');
-    }
+    // 3. שימוש בפקודת UPSERT - אם המשתמש קיים, הוא מעדכן לו את הסיסמה. אם לא, הוא יוצר אותו.
+    // זה מבטיח שהסיסמה ב-DB תמיד תהיה תואמת להצפנה של השרת הנוכחי
+    const upsertAdminQuery = `
+      INSERT INTO users (username, password, role) 
+      VALUES ($1, $2, $3)
+      ON CONFLICT (username) 
+      DO UPDATE SET password = EXCLUDED.password;
+    `;
+
+    await pool.query(upsertAdminQuery, ['admin', hashedPw, 'admin']);
     
+    console.log('✅ Success: Admin user is ready and password reset to "admin123"');
     console.log('--- Database Initialization Finished ---');
   } catch (err) {
     console.error('❌ Error during initialization:', err);
