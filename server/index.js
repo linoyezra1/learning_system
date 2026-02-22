@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const next = require('next');
 const { Pool } = require('pg'); 
-const bcrypt = require('bcryptjs'); // <--- התיקון כאן: הוספתי js בסוף
+const bcrypt = require('bcryptjs'); 
 require('dotenv').config();
 
 const authRoutes = require('./routes/auth');
@@ -36,28 +36,29 @@ async function initializeDatabase() {
   try {
     console.log('--- Database Initialization Started ---');
     
-    // 1. יצירת טבלת משתמשים אם היא לא קיימת
+    // 1. יצירת טבלת משתמשים עם השמות המדויקים שהקוד שלך מחפש (full_name, last_login)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
+        full_name VARCHAR(255),
         role VARCHAR(50) DEFAULT 'student',
+        last_login TIMESTAMP,
         "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
 
     // 2. בדיקה אם קיים משתמש admin
-    const checkAdmin = await pool.query("SELECT * FROM users WHERE username = 'admin'");
+    const checkAdmin = await pool.query("SELECT * FROM users WHERE LOWER(TRIM(username)) = 'admin'");
     
     if (checkAdmin.rowCount === 0) {
       // 3. יצירת סיסמה מוצפנת למנהל (admin123)
-      // התיקון כאן: bcryptjs עובד בדיוק אותו דבר
       const hashedPw = await bcrypt.hash('admin123', 10); 
       await pool.query(
-        "INSERT INTO users (username, password, role) VALUES ($1, $2, $3)",
-        ['admin', hashedPw, 'admin']
+        "INSERT INTO users (username, password, full_name, role) VALUES ($1, $2, $3, $4)",
+        ['admin', hashedPw, 'מנהל מערכת', 'admin']
       );
       console.log('✅ Success: Admin user created (admin / admin123)');
     } else {
