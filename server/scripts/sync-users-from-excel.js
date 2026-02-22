@@ -81,7 +81,7 @@ async function run() {
           });
         } else {
           const fullName = row.full_name != null ? String(row.full_name).trim() : username;
-          const role = (row.role && String(row.role).trim()) || 'student';
+          const role = (row.role && String(row.role).trim().toLowerCase()) || 'student';
           db.run(
             'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
             [username, hashedPassword, fullName, role],

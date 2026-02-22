@@ -102,7 +102,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
       ROUND((CAST(COALESCE(up.completed_slides, 0) AS FLOAT) / NULLIF((SELECT COUNT(*) FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1), 0)) * 100, 2) as completion_percentage
     FROM users u
     LEFT JOIN user_progress up ON u.id = up.user_id AND up.course_id = 1
-    WHERE u.role = 'student'
+    WHERE LOWER(TRIM(u.role)) = 'student'
     ORDER BY COALESCE(u.full_name, u.username), u.username`,
     [],
     (err, students) => {

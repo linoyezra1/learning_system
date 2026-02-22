@@ -92,8 +92,14 @@ router.post('/:slideId/progress', authenticateToken, (req, res) => {
           if (saveErr) {
             return res.status(500).json({ error: 'שגיאה בשמירת התקדמות' });
           }
-          updateUserProgressSummary(userId);
-          res.json({ message: 'התקדמות נשמרה בהצלחה', progressId: this.lastID });
+          const progressId = this.lastID;
+          updateUserProgressSummary(userId, (summaryErr) => {
+            if (summaryErr) {
+              console.error('updateUserProgressSummary failed:', summaryErr);
+              return res.status(500).json({ error: 'שגיאה בעדכון סיכום התקדמות' });
+            }
+            res.json({ message: 'התקדמות נשמרה בהצלחה', progressId });
+          });
         }
       );
     });
@@ -117,7 +123,7 @@ router.get('/:slideId/progress', authenticateToken, (req, res) => {
   );
 });
 
-function updateUserProgressSummary(userId) {
+function updateUserProgressSummary(userId, callback) {
   db.get(
     `SELECT 
       COUNT(DISTINCT s.id)::int as total_slides,
@@ -128,7 +134,14 @@ function updateUserProgressSummary(userId) {
     WHERE s.module_id IN (SELECT id FROM modules WHERE course_id = ?)`,
     [userId, COURSE_ID],
     (err, result) => {
-      if (err || !result) return;
+      if (err) {
+        console.error('updateUserProgressSummary (count query):', err);
+        return callback(err);
+      }
+      if (!result) {
+        console.error('updateUserProgressSummary: count query returned no row');
+        return callback(new Error('No count result'));
+      }
       const { total_slides, completed_slides, total_time } = result;
       db.run(
         `INSERT INTO user_progress (user_id, course_id, total_slides, completed_slides, total_time_spent, last_accessed)
@@ -138,7 +151,14 @@ function updateUserProgressSummary(userId) {
            completed_slides = EXCLUDED.completed_slides,
            total_time_spent = EXCLUDED.total_time_spent,
            last_accessed = CURRENT_TIMESTAMP`,
-        [userId, COURSE_ID, total_slides, completed_slides, total_time]
+        [userId, COURSE_ID, total_slides, completed_slides, total_time],
+        function(runErr) {
+          if (runErr) {
+            console.error('updateUserProgressSummary (upsert):', runErr);
+            return callback(runErr);
+          }
+          callback(null);
+        }
       );
     }
   );
