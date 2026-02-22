@@ -19,7 +19,7 @@ router.post('/login', (req, res) => {
 
   const trimmedUsername = String(username || '').trim().toLowerCase();
 
-  // שימי לב: השאילתה מותאמת לשמות ב-Postgres
+  // שאילתה המשתמשת בשדות שקיימים אצלך ב-Railway
   db.get(
     'SELECT * FROM users WHERE LOWER(TRIM(username)) = ?',
     [trimmedUsername],
@@ -36,7 +36,6 @@ router.post('/login', (req, res) => {
 
       console.log('תוצאה: המשתמש נמצא, בודק סיסמה...');
       
-      // השוואת הסיסמה שהוזנה לסיסמה המוצפנת בבסיס הנתונים
       const validPassword = await bcrypt.compare(password, user.password);
       
       if (!validPassword) {
@@ -45,9 +44,6 @@ router.post('/login', (req, res) => {
       }
 
       console.log('תוצאה: התחברות הצליחה עבור:', user.username);
-
-      // עדכון כניסה אחרונה (אם העמודה קיימת, אם לא - זה פשוט לא יעשה כלום)
-      db.run('UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = ?', [user.id]);
 
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
@@ -60,7 +56,7 @@ router.post('/login', (req, res) => {
         user: {
           id: user.id,
           username: user.username,
-          fullName: user.full_name || user.username, // מגבה למקרה שאין full_name
+          fullName: user.username, // משתמשים ב-username כי אין full_name בטבלה
           role: user.role
         }
       });
@@ -70,18 +66,18 @@ router.post('/login', (req, res) => {
 
 // Register
 router.post('/register', async (req, res) => {
-  const { username, password, fullName, role = 'student' } = req.body;
+  const { username, password, role = 'student' } = req.body;
 
-  if (!username || !password || !fullName) {
-    return res.status(400).json({ error: 'נא למלא את כל השדות הנדרשים' });
+  if (!username || !password) {
+    return res.status(400).json({ error: 'נא למלא שם משתמש וסיסמה' });
   }
 
   const trimmedUsername = String(username || '').trim();
   const hashedPassword = await bcrypt.hash(password, 10);
 
   db.run(
-    'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-    [trimmedUsername, hashedPassword, fullName, role],
+    'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+    [trimmedUsername, hashedPassword, role],
     function(err) {
       if (err) {
         console.error('שגיאה ברישום:', err);
@@ -89,8 +85,7 @@ router.post('/register', async (req, res) => {
       }
 
       res.json({
-        message: 'משתמש נוצר בהצלחה',
-        userId: this.lastID
+        message: 'משתמש נוצר בהצלחה'
       });
     }
   );
@@ -110,11 +105,16 @@ router.get('/verify', (req, res) => {
       return res.status(403).json({ error: 'טוקן לא תקין' });
     }
 
-    db.get('SELECT id, username, full_name, role FROM users WHERE id = ?', [decoded.id], (err, user) => {
+    db.get('SELECT id, username, role FROM users WHERE id = ?', [decoded.id], (err, user) => {
       if (err || !user) {
         return res.status(404).json({ error: 'משתמש לא נמצא' });
       }
-      res.json({ user });
+      res.json({ 
+        user: {
+            ...user,
+            fullName: user.username // התאמה לממשק
+        } 
+      });
     });
   });
 });
