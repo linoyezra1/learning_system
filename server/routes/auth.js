@@ -6,44 +6,19 @@ const { JWT_SECRET } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Login
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
-  
-  console.log('--- ניסיון התחברות ---');
-  console.log('שם משתמש שהוזן:', username);
-
-  if (!username || !password) {
-    return res.status(400).json({ error: 'נא להזין שם משתמש וסיסמה' });
-  }
-
   const trimmedUsername = String(username || '').trim().toLowerCase();
 
-  // שאילתה המשתמשת בשדות שקיימים אצלך ב-Railway
   db.get(
     'SELECT * FROM users WHERE LOWER(TRIM(username)) = ?',
     [trimmedUsername],
     async (err, user) => {
-      if (err) {
-        console.error('שגיאת בסיס נתונים:', err);
-        return res.status(500).json({ error: 'שגיאה בבסיס הנתונים' });
-      }
+      if (err) return res.status(500).json({ error: 'שגיאה בבסיס הנתונים' });
+      if (!user) return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
 
-      if (!user) {
-        console.log('תוצאה: המשתמש לא נמצא בטבלה');
-        return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
-      }
-
-      console.log('תוצאה: המשתמש נמצא, בודק סיסמה...');
-      
       const validPassword = await bcrypt.compare(password, user.password);
-      
-      if (!validPassword) {
-        console.log('תוצאה: הסיסמה לא תואמת');
-        return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
-      }
-
-      console.log('תוצאה: התחברות הצליחה עבור:', user.username);
+      if (!validPassword) return res.status(401).json({ error: 'שם משתמש או סיסמה שגויים' });
 
       const token = jwt.sign(
         { id: user.id, username: user.username, role: user.role },
@@ -51,12 +26,15 @@ router.post('/login', (req, res) => {
         { expiresIn: '7d' }
       );
 
+      // כאן התיקון הקריטי: אנחנו שולחים גם full_name וגם fullName
+      // כדי לוודא שה-Frontend מוצא את מה שהוא מחפש
       res.json({
         token,
         user: {
           id: user.id,
           username: user.username,
-          fullName: user.username, // משתמשים ב-username כי אין full_name בטבלה
+          full_name: user.full_name || user.username,
+          fullName: user.full_name || user.username, 
           role: user.role
         }
       });
@@ -64,55 +42,23 @@ router.post('/login', (req, res) => {
   );
 });
 
-// Register
-router.post('/register', async (req, res) => {
-  const { username, password, role = 'student' } = req.body;
-
-  if (!username || !password) {
-    return res.status(400).json({ error: 'נא למלא שם משתמש וסיסמה' });
-  }
-
-  const trimmedUsername = String(username || '').trim();
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  db.run(
-    'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
-    [trimmedUsername, hashedPassword, role],
-    function(err) {
-      if (err) {
-        console.error('שגיאה ברישום:', err);
-        return res.status(500).json({ error: 'שגיאה ביצירת משתמש' });
-      }
-
-      res.json({
-        message: 'משתמש נוצר בהצלחה'
-      });
-    }
-  );
-});
-
-// Verify token
 router.get('/verify', (req, res) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: 'לא נמצא טוקן' });
-  }
+  if (!token) return res.status(401).json({ error: 'לא נמצא טוקן' });
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) {
-      return res.status(403).json({ error: 'טוקן לא תקין' });
-    }
+    if (err) return res.status(403).json({ error: 'טוקן לא תקין' });
 
     db.get('SELECT id, username, role FROM users WHERE id = ?', [decoded.id], (err, user) => {
-      if (err || !user) {
-        return res.status(404).json({ error: 'משתמש לא נמצא' });
-      }
+      if (err || !user) return res.status(404).json({ error: 'משתמש לא נמצא' });
+      
       res.json({ 
         user: {
-            ...user,
-            fullName: user.username // התאמה לממשק
+          ...user,
+          full_name: user.username,
+          fullName: user.username
         } 
       });
     });
