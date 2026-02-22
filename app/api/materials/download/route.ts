@@ -2,47 +2,39 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
 
+// Exact filename as provided - do not change
+const HANDBOOK_FILENAME = 'חוברת לימוד עזרה ראשונה.pdf';
+
 export async function GET(request: NextRequest) {
   try {
-    // Try multiple possible locations for the handbook
     const possiblePaths = [
-      path.join(process.cwd(), 'public', 'חוברת 44 מעודכן 04.01.pdf'),
-      path.join(process.cwd(), 'public', 'uploads', 'חוברת 44 מעודכן 04.01.pdf'),
-      path.join(process.cwd(), 'public', 'handbook.pdf'),
-      path.join(process.cwd(), 'חוברת 44 מעודכן 04.01.pdf'),
-      path.join(process.cwd(), 'public', 'uploads', 'handbook.pdf'),
+      path.join(process.cwd(), 'public', HANDBOOK_FILENAME),
+      path.join(process.cwd(), HANDBOOK_FILENAME),
     ];
 
     let filePath: string | null = null;
-    let found = false;
-
     for (const testPath of possiblePaths) {
       try {
         await readFile(testPath);
         filePath = testPath;
-        found = true;
         break;
-      } catch (error) {
-        // File not found at this location, try next
+      } catch {
         continue;
       }
     }
 
-    if (!found) {
+    if (!filePath) {
       return NextResponse.json(
-        { error: 'החוברת לא נמצאה. אנא הוסף את הקובץ "חוברת 44 מעודכן 04.01.pdf" לתיקיית public/' },
+        { error: 'החוברת לא נמצאה. אנא הוסף את הקובץ "' + HANDBOOK_FILENAME + '" לתיקיית public/ או לשורש הפרויקט.' },
         { status: 404 }
       );
     }
 
-    // Read the file
-    const fileBuffer = await readFile(filePath!);
-
-    // Return as PDF download
+    const fileBuffer = await readFile(filePath);
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'attachment; filename="חוברת 44 מעודכן 04.01.pdf"',
+        'Content-Disposition': 'attachment; filename="' + HANDBOOK_FILENAME + '"',
       },
     });
   } catch (error) {

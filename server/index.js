@@ -14,6 +14,7 @@ const slidesRoutes = require('./routes/slides');
 const progressRoutes = require('./routes/progress');
 const questionsRoutes = require('./routes/questions');
 const reportsRoutes = require('./routes/reports');
+const materialsRoutes = require('./routes/materials');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -211,6 +212,7 @@ app.use('/api/slides', slidesRoutes);
 app.use('/api/progress', progressRoutes);
 app.use('/api/questions', questionsRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/materials', materialsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

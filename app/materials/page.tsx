@@ -3,6 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Exact filename - do not change. Used for display and download attribute.
+// For any URL that includes the filename (e.g. static file link), use encodeURIComponent(HANDBOOK_FILENAME) for mobile-safe URLs.
+const HANDBOOK_FILENAME = 'חוברת לימוד עזרה ראשונה.pdf';
+const DOWNLOAD_API = '/api/materials/download';
+
 export default function MaterialsPage() {
   const router = useRouter();
   const [materials, setMaterials] = useState<any[]>([]);
@@ -15,52 +20,20 @@ export default function MaterialsPage() {
       return;
     }
 
-    // Check if handbook exists - try multiple possible locations
     setMaterials([
       {
         id: 1,
-        title: 'חוברת 44 מעודכן 04.01.pdf',
+        title: HANDBOOK_FILENAME,
         description: 'חוברת הקורס המלאה - קורס עזרה ראשונה',
         type: 'pdf',
-        url: '/חוברת 44 מעודכן 04.01.pdf', // Try root public folder first
-        altUrls: [
-          '/uploads/חוברת 44 מעודכן 04.01.pdf',
-          '/handbook.pdf',
-          '/uploads/handbook.pdf'
-        ]
-      }
+      },
     ]);
     setLoading(false);
   }, [router]);
 
-  const handleDownload = async (material: any) => {
+  const handlePrint = async () => {
     try {
-      // Try to download via API route first
-      const response = await fetch('/api/materials/download');
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = material.title;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-      } else {
-        const errorData = await response.json();
-        alert(errorData.error || 'שגיאה בהורדת הקובץ');
-      }
-    } catch (error) {
-      console.error('Download error:', error);
-      alert('שגיאה בהורדת הקובץ. ודא שהקובץ "חוברת 44 מעודכן 04.01.pdf" נמצא בתיקיית הפרויקט.');
-    }
-  };
-
-  const handlePrint = async (material: any) => {
-    try {
-      // Download and open in new window for printing
-      const response = await fetch('/api/materials/download');
+      const response = await fetch(DOWNLOAD_API);
       if (response.ok) {
         const blob = await response.blob();
         const url = window.URL.createObjectURL(blob);
@@ -118,15 +91,17 @@ export default function MaterialsPage() {
                       <p style={{ margin: '0.5rem 0 0 0', color: 'var(--muted)' }}>{material.description}</p>
                     )}
                   </div>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => handleDownload(material)}
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <a
+                      href={DOWNLOAD_API}
+                      download={HANDBOOK_FILENAME}
                       className="btn btn-primary"
+                      style={{ textDecoration: 'none', color: 'inherit' }}
                     >
                       הורד
-                    </button>
+                    </a>
                     <button
-                      onClick={() => handlePrint(material)}
+                      onClick={() => handlePrint()}
                       className="btn btn-secondary"
                     >
                       הדפס
