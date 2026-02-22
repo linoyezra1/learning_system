@@ -4,6 +4,8 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+const COURSE_ID = 1; // Same course as add-full-content and slides (course_id = 1)
+
 function isTableMissingError(err) {
   return err && (err.code === '42P01' || (err.message && err.message.includes('does not exist')));
 }
@@ -86,7 +88,7 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
   );
 });
 
-// Get all students' progress (instructor only); total_slides = course total from slides table
+// Get all students (instructor only). LEFT JOIN so every student appears even with no user_progress row.
 router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req, res) => {
   db.all(
     `SELECT 
@@ -102,6 +104,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
     LEFT JOIN user_progress up ON u.id = up.user_id AND up.course_id = 1
     WHERE u.role = 'student'
     ORDER BY COALESCE(u.full_name, u.username), u.username`,
+    [],
     (err, students) => {
       if (err) {
         if (isTableMissingError(err)) return res.json([]);
