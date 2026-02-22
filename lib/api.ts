@@ -2,42 +2,40 @@
 
 // Get API URL - works in both client and server
 export function getApiUrl(): string {
-  // If NEXT_PUBLIC_API_URL is set, use it
+  // If NEXT_PUBLIC_API_URL is set (from Railway variables), use it
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   
   if (apiUrl) {
     return apiUrl;
   }
   
-  // In production (Render), use relative URLs since Express serves both frontend and API
+  // In production, when Express serves both frontend and API, use relative URLs
   if (typeof window !== 'undefined') {
-    // Client-side: use relative URL (same origin)
+    // Client-side: empty string makes the request go to the same domain as the site
     return '';
   }
   
-  // Server-side fallback (shouldn't happen with static export, but just in case)
+  // Server-side fallback for development
   return 'http://localhost:3001';
 }
 
 // Get internal API URL for server-side Next.js API routes
-// This is used when Next.js API routes need to call the Express backend
 export function getInternalApiUrl(): string {
-  // If INTERNAL_API_URL is set (for production), use it
   const internalApiUrl = process.env.INTERNAL_API_URL;
   if (internalApiUrl) {
     return internalApiUrl;
   }
   
-  // In production on Render, Express serves both frontend and API on same port
-  // So we use relative URL or localhost
+  // In production, use the environment port or 3001
+  const port = process.env.PORT || '3001';
+  
   if (process.env.NODE_ENV === 'production') {
-    // On Render, the Express server runs on the same port, so use localhost
-    const port = process.env.PORT || '3001';
-    return `http://localhost:${port}`;
+    // 127.0.0.1 is more stable than 'localhost' inside server environments
+    return `http://127.0.0.1:${port}`;
   }
   
-  // Development: Express runs on port 3001
-  return 'http://localhost:3001';
+  // Development default
+  return `http://localhost:${port}`;
 }
 
 export async function apiCall(
@@ -55,11 +53,12 @@ export async function apiCall(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const url = endpoint.startsWith('http') ? endpoint : `${getApiUrl()}${endpoint}`;
+  // Build the full URL
+  const baseUrl = getApiUrl();
+  const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
 
   return fetch(url, {
     ...options,
     headers,
   });
 }
-
