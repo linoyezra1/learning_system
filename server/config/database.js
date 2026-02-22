@@ -32,8 +32,12 @@ const db = {
     const actualCallback = typeof params === 'function' ? params : callback;
 
     pool.query(pgSql, actualParams, (err, res) => {
-      // ב-SQLite משתמשים ב-this.lastID, כאן נחזיר אובייקט דמה
-      if (actualCallback) actualCallback.call({ lastID: res ? res.insertId : null }, err);
+      // PostgreSQL: lastID from RETURNING id (res.rows[0].id), changes from rowCount
+      const lastID = (res && res.rows && res.rows[0] && res.rows[0].id != null)
+        ? Number(res.rows[0].id)
+        : null;
+      const changes = res ? res.rowCount : 0;
+      if (actualCallback) actualCallback.call({ lastID, changes }, err);
     });
   },
 

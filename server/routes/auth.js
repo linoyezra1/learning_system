@@ -26,16 +26,16 @@ router.post('/login', (req, res) => {
         { expiresIn: '7d' }
       );
 
-      // כאן התיקון הקריטי: אנחנו שולחים גם full_name וגם fullName
-      // כדי לוודא שה-Frontend מוצא את מה שהוא מחפש
+      // JSON-safe user object: Number(id) prevents BigInt serialization crash in localStorage
+      const displayName = user.full_name != null ? String(user.full_name) : String(user.username);
       res.json({
         token,
         user: {
-          id: user.id,
-          username: user.username,
-          full_name: user.full_name || user.username,
-          fullName: user.full_name || user.username, 
-          role: user.role
+          id: Number(user.id),
+          username: String(user.username),
+          full_name: displayName,
+          fullName: displayName,
+          role: String(user.role)
         }
       });
     }
@@ -53,13 +53,16 @@ router.get('/verify', (req, res) => {
 
     db.get('SELECT id, username, role FROM users WHERE id = ?', [decoded.id], (err, user) => {
       if (err || !user) return res.status(404).json({ error: 'משתמש לא נמצא' });
-      
-      res.json({ 
+      // JSON-safe user object for frontend (e.g. verify → Dashboard)
+      const displayName = user.full_name != null ? String(user.full_name) : String(user.username);
+      res.json({
         user: {
-          ...user,
-          full_name: user.username,
-          fullName: user.username
-        } 
+          id: Number(user.id),
+          username: String(user.username),
+          full_name: displayName,
+          fullName: displayName,
+          role: String(user.role)
+        }
       });
     });
   });

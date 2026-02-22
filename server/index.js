@@ -36,17 +36,25 @@ async function initializeDatabase() {
   try {
     console.log('--- Database Initialization Started ---');
     
-    // 1. יצירת הטבלה אם אינה קיימת (מותאם לשדות שיש לך ב-Railway)
+    // 1. Create users table with columns that match app queries (full_name, created_at, last_login)
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         role VARCHAR(50) DEFAULT 'student',
-        "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        full_name VARCHAR(255),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        last_login TIMESTAMP WITH TIME ZONE
       );
     `);
+
+    // Add columns to existing tables (no-op if already present)
+    await pool.query(`
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
+    `).catch(() => { /* ignore if columns already exist or table differs */ });
 
     // 2. יצירת סיסמה מוצפנת תקנית (admin123)
     const hashedPw = await bcrypt.hash('admin123', 10); 
