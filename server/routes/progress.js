@@ -95,6 +95,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
       u.id,
       u.username,
       COALESCE(u.full_name, u.username) as full_name,
+      u.course_group_id,
       (SELECT COUNT(*)::int FROM slides s JOIN modules m ON s.module_id = m.id WHERE m.course_id = 1) as total_slides,
       COALESCE(up.completed_slides, 0) as completed_slides,
       COALESCE(up.total_time_spent, 0) as total_time_spent,

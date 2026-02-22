@@ -106,6 +106,7 @@ export default function InstructorDashboard({ user }: { user: any }) {
                 <tr style={{ background: 'var(--brand-cream)', borderBottom: '2px solid var(--brand-deep)' }}>
                   <th style={{ padding: '0.75rem', textAlign: 'right' }}>שם מלא</th>
                   <th style={{ padding: '0.75rem', textAlign: 'right' }}>שם משתמש</th>
+                  <th style={{ padding: '0.75rem', textAlign: 'right' }}>מזהה קורס</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>אחוז השלמה</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>שקפים</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>זמן</th>
@@ -122,6 +123,7 @@ export default function InstructorDashboard({ user }: { user: any }) {
                     <tr key={student.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                       <td style={{ padding: '0.75rem' }}>{student.full_name}</td>
                       <td style={{ padding: '0.75rem' }}>{student.username}</td>
+                      <td style={{ padding: '0.75rem' }}>{student.course_group_id ?? ''}</td>
                       <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold' }}>
                         {completion}%
                       </td>

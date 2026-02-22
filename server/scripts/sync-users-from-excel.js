@@ -70,7 +70,8 @@ async function run() {
           return;
         }
         if (existingUser) {
-          db.run('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, existingUser.id], function(updateErr) {
+          const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
+          db.run('UPDATE users SET password = ?, course_group_id = ? WHERE id = ?', [hashedPassword, courseGroupId, existingUser.id], function(updateErr) {
             if (updateErr) {
               errors.push(`Row ${i + 2}: update failed - ${updateErr.message}`);
             } else {
@@ -82,9 +83,10 @@ async function run() {
         } else {
           const fullName = row.full_name != null ? String(row.full_name).trim() : username;
           const role = (row.role && String(row.role).trim().toLowerCase()) || 'student';
+          const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
           db.run(
-            'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-            [username, hashedPassword, fullName, role],
+            'INSERT INTO users (username, password, full_name, role, course_group_id) VALUES (?, ?, ?, ?, ?)',
+            [username, hashedPassword, fullName, role, courseGroupId],
             function(insertErr) {
               if (insertErr) {
                 const msg = insertErr.message || '';

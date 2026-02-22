@@ -27,7 +27,7 @@ const upload = multer({
 // Get all users (instructor only)
 router.get('/', authenticateToken, requireRole(['instructor', 'admin']), (req, res) => {
   db.all(
-    'SELECT id, username, full_name, role, created_at, last_login FROM users ORDER BY full_name',
+    'SELECT id, username, full_name, role, course_group_id, created_at, last_login FROM users ORDER BY full_name',
     (err, users) => {
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת המשתמשים' });
@@ -47,7 +47,7 @@ router.get('/:userId', authenticateToken, (req, res) => {
   }
 
   db.get(
-    'SELECT id, username, full_name, role, created_at, last_login FROM users WHERE id = ?',
+    'SELECT id, username, full_name, role, course_group_id, created_at, last_login FROM users WHERE id = ?',
     [userId],
     (err, user) => {
       if (err || !user) {
@@ -60,17 +60,18 @@ router.get('/:userId', authenticateToken, (req, res) => {
 
 // Create user (instructor only)
 router.post('/', authenticateToken, requireRole(['instructor', 'admin']), async (req, res) => {
-  const { username, password, fullName, role = 'student' } = req.body;
+  const { username, password, fullName, role = 'student', course_group_id } = req.body;
 
   if (!username || !password || !fullName) {
     return res.status(400).json({ error: 'נא למלא את כל השדות הנדרשים' });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
+  const courseGroupId = course_group_id != null ? String(course_group_id).trim() : null;
 
   db.run(
-    'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-    [username, hashedPassword, fullName, role],
+    'INSERT INTO users (username, password, full_name, role, course_group_id) VALUES (?, ?, ?, ?, ?)',
+    [username, hashedPassword, fullName, role, courseGroupId || null],
     function(err) {
       if (err) {
         if (err.message.includes('UNIQUE constraint failed')) {
@@ -83,7 +84,8 @@ router.post('/', authenticateToken, requireRole(['instructor', 'admin']), async 
         id: this.lastID,
         username,
         fullName,
-        role
+        role,
+        course_group_id: courseGroupId || null
       });
     }
   );
@@ -155,10 +157,10 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
             }
 
             if (existingUser) {
-              // Update existing user - use the actual username from DB to avoid case mismatch
+              const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'UPDATE users SET password = ? WHERE id = ?',
-                [hashedPassword, existingUser.id],
+                'UPDATE users SET password = ?, course_group_id = ? WHERE id = ?',
+                [hashedPassword, courseGroupId, existingUser.id],
                 function(updateErr) {
                   if (updateErr) {
                     console.error(`Error updating user ${username}:`, updateErr);
@@ -171,13 +173,12 @@ router.post('/update-from-excel', authenticateToken, requireRole(['instructor', 
                 }
               );
             } else {
-              // Create new user
-              const fullName = username; // Default full_name to username
-              const role = 'student'; // Default role
-
+              const fullName = (row.full_name != null ? String(row.full_name).trim() : null) || username;
+              const role = (row.role && String(row.role).trim().toLowerCase()) || 'student';
+              const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-                [username, hashedPassword, fullName, role],
+                'INSERT INTO users (username, password, full_name, role, course_group_id) VALUES (?, ?, ?, ?, ?)',
+                [username, hashedPassword, fullName, role, courseGroupId],
                 function(insertErr) {
                   if (insertErr) {
                     if (insertErr.message.includes('UNIQUE constraint failed')) {
@@ -291,10 +292,10 @@ router.post('/sync-from-excel', authenticateToken, requireRole(['instructor', 'a
             }
 
             if (existingUser) {
-              // Update existing user - use the actual username from DB to avoid case mismatch
+              const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'UPDATE users SET password = ? WHERE id = ?',
-                [hashedPassword, existingUser.id],
+                'UPDATE users SET password = ?, course_group_id = ? WHERE id = ?',
+                [hashedPassword, courseGroupId, existingUser.id],
                 function(updateErr) {
                   if (updateErr) {
                     console.error(`Error updating user ${username}:`, updateErr);
@@ -307,13 +308,12 @@ router.post('/sync-from-excel', authenticateToken, requireRole(['instructor', 'a
                 }
               );
             } else {
-              // Create new user
-              const fullName = username; // Default full_name to username
-              const role = 'student'; // Default role
-
+              const fullName = (row.full_name != null ? String(row.full_name).trim() : null) || username;
+              const role = (row.role && String(row.role).trim().toLowerCase()) || 'student';
+              const courseGroupId = row.course_group_id != null ? String(row.course_group_id).trim() : null;
               db.run(
-                'INSERT INTO users (username, password, full_name, role) VALUES (?, ?, ?, ?)',
-                [username, hashedPassword, fullName, role],
+                'INSERT INTO users (username, password, full_name, role, course_group_id) VALUES (?, ?, ?, ?, ?)',
+                [username, hashedPassword, fullName, role, courseGroupId],
                 function(insertErr) {
                   if (insertErr) {
                     if (insertErr.message.includes('UNIQUE constraint failed')) {

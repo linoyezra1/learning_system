@@ -54,6 +54,7 @@ async function initializeDatabase() {
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)').catch(() => {});
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP').catch(() => {});
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS course_group_id TEXT').catch(() => {});
     console.log('[init] Alter users OK');
 
     console.log('[init] Creating table: courses...');

@@ -1,0 +1,31 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+import { getInternalApiUrl } from '@/lib/api';
+
+export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+
+  if (!authHeader) {
+    return NextResponse.json({ error: 'אין הרשאה - נדרש טוקן אימות' }, { status: 401 });
+  }
+
+  try {
+    const body = await request.json();
+    const API_URL = getInternalApiUrl();
+
+    const response = await fetch(`${API_URL}/api/users`, {
+      method: 'POST',
+      headers: {
+        'Authorization': authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+    return NextResponse.json(data, { status: response.status });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    return NextResponse.json({ error: 'שגיאה ביצירת משתמש' }, { status: 500 });
+  }
+}
