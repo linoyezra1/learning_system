@@ -6,11 +6,11 @@ const router = express.Router();
 
 // Get all courses
 router.get('/', authenticateToken, (req, res) => {
-  db.all('SELECT * FROM courses ORDER BY created_at DESC', (err, courses) => {
+  db.all('SELECT * FROM courses ORDER BY id DESC', (err, courses) => {
     if (err) {
       return res.status(500).json({ error: 'שגיאה בטעינת הקורסים' });
     }
-    res.json(courses);
+    res.json(Array.isArray(courses) ? courses : []);
   });
 });
 
@@ -30,7 +30,7 @@ router.get('/:courseId', authenticateToken, (req, res) => {
         if (err) {
           return res.status(500).json({ error: 'שגיאה בטעינת הנושאים' });
         }
-        res.json({ ...course, modules });
+        res.json({ ...course, modules: Array.isArray(modules) ? modules : [] });
       }
     );
   });

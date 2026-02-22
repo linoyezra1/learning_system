@@ -27,7 +27,7 @@ router.get('/', authenticateToken, (req, res) => {
     if (err) {
       return res.status(500).json({ error: 'שגיאה בטעינת השאלות' });
     }
-    res.json(questions);
+    res.json(Array.isArray(questions) ? questions : []);
   });
 });
 
@@ -104,13 +104,13 @@ router.get('/my-questions', authenticateToken, (req, res) => {
     LEFT JOIN slides s ON sq.slide_id = s.id
     LEFT JOIN modules m ON s.module_id = m.id
     WHERE sq.user_id = ?
-    ORDER BY sq.created_at DESC`,
+    ORDER BY sq.id DESC`,
     [userId],
     (err, questions) => {
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת השאלות' });
       }
-      res.json(questions);
+      res.json(Array.isArray(questions) ? questions : []);
     }
   );
 });
@@ -138,13 +138,14 @@ router.get('/all-questions', authenticateToken, requireRole(['instructor', 'admi
     params.push(status);
   }
 
-  query += ' ORDER BY sq.created_at DESC';
+  query += ' ORDER BY sq.id DESC';
 
   db.all(query, params, (err, questions) => {
     if (err) {
-      return res.status(500).json({ error: 'שגיאה בטעינת השאלות' });
+      console.error('all-questions error:', err);
+      return res.json([]);
     }
-    res.json(questions);
+    res.json(Array.isArray(questions) ? questions : []);
   });
 });
 

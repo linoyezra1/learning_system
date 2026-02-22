@@ -15,7 +15,7 @@ router.get('/module/:moduleId', authenticateToken, (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת השקפים' });
       }
-      res.json(slides);
+      res.json(Array.isArray(slides) ? slides : []);
     }
   );
 });
@@ -142,7 +142,7 @@ function updateUserProgressSummary(userId) {
       COUNT(DISTINCT sp.slide_id) as completed_slides,
       COALESCE(SUM(sp.time_spent), 0) as total_time
     FROM slides s
-    LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND sp.completed = 1
+    LEFT JOIN slide_progress sp ON s.id = sp.slide_id AND sp.user_id = ? AND (sp.completed = true OR sp.completed = 1)
     WHERE s.module_id IN (SELECT id FROM modules WHERE course_id = 1)`,
     [userId],
     (err, result) => {

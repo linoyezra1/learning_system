@@ -40,7 +40,7 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
       m.id as module_id,
       m.title as module_title,
       COUNT(DISTINCT s.id) as total_slides,
-      COUNT(DISTINCT CASE WHEN sp.completed = 1 THEN sp.slide_id END) as completed_slides,
+      COUNT(DISTINCT CASE WHEN (sp.completed = true OR sp.completed = 1) THEN sp.slide_id END) as completed_slides,
       SUM(sp.time_spent) as time_spent
     FROM modules m
     LEFT JOIN slides s ON m.id = s.module_id
@@ -53,7 +53,7 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות מפורטת' });
       }
-      res.json(modules);
+      res.json(Array.isArray(modules) ? modules : []);
     }
   );
 });
@@ -78,7 +78,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות תלמידים' });
       }
-      res.json(students);
+      res.json(Array.isArray(students) ? students : []);
     }
   );
 });
@@ -105,7 +105,7 @@ router.get('/student/:userId', authenticateToken, requireRole(['instructor', 'ad
       if (err) {
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות תלמיד' });
       }
-      res.json(slides);
+      res.json(Array.isArray(slides) ? slides : []);
     }
   );
 });
