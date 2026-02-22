@@ -4,6 +4,10 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+function isTableMissingError(err) {
+  return err && (err.code === '42P01' || (err.message && err.message.includes('does not exist')));
+}
+
 // Get practice questions for a module or slide
 router.get('/', authenticateToken, (req, res) => {
   const { moduleId, slideId } = req.query;
@@ -25,6 +29,7 @@ router.get('/', authenticateToken, (req, res) => {
 
   db.all(query, params, (err, questions) => {
     if (err) {
+      if (isTableMissingError(err)) return res.json([]);
       return res.status(500).json({ error: 'שגיאה בטעינת השאלות' });
     }
     res.json(Array.isArray(questions) ? questions : []);
@@ -108,6 +113,7 @@ router.get('/my-questions', authenticateToken, (req, res) => {
     [userId],
     (err, questions) => {
       if (err) {
+        if (isTableMissingError(err)) return res.json([]);
         return res.status(500).json({ error: 'שגיאה בטעינת השאלות' });
       }
       res.json(Array.isArray(questions) ? questions : []);
@@ -142,6 +148,10 @@ router.get('/all-questions', authenticateToken, requireRole(['instructor', 'admi
 
   db.all(query, params, (err, questions) => {
     if (err) {
+      if (isTableMissingError(err)) {
+        console.warn('all-questions: table missing, returning []');
+        return res.json([]);
+      }
       console.error('all-questions error:', err);
       return res.json([]);
     }

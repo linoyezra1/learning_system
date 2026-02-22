@@ -4,6 +4,17 @@ const { authenticateToken, requireRole } = require('../middleware/auth');
 
 const router = express.Router();
 
+function isTableMissingError(err) {
+  return err && (err.code === '42P01' || (err.message && err.message.includes('does not exist')));
+}
+
+const emptyProgress = {
+  total_slides: 0,
+  completed_slides: 0,
+  total_time_spent: 0,
+  completion_percentage: 0
+};
+
 // Get user's own progress
 router.get('/my-progress', authenticateToken, (req, res) => {
   const userId = req.user.id;
@@ -19,14 +30,12 @@ router.get('/my-progress', authenticateToken, (req, res) => {
     [userId],
     (err, progress) => {
       if (err) {
+        if (isTableMissingError(err)) {
+          return res.json(emptyProgress);
+        }
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות' });
       }
-      res.json(progress || {
-        total_slides: 0,
-        completed_slides: 0,
-        total_time_spent: 0,
-        completion_percentage: 0
-      });
+      res.json(progress || emptyProgress);
     }
   );
 });
@@ -51,6 +60,7 @@ router.get('/my-progress/detailed', authenticateToken, (req, res) => {
     [userId],
     (err, modules) => {
       if (err) {
+        if (isTableMissingError(err)) return res.json([]);
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות מפורטת' });
       }
       res.json(Array.isArray(modules) ? modules : []);
@@ -76,6 +86,7 @@ router.get('/all', authenticateToken, requireRole(['instructor', 'admin']), (req
     ORDER BY u.full_name`,
     (err, students) => {
       if (err) {
+        if (isTableMissingError(err)) return res.json([]);
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות תלמידים' });
       }
       res.json(Array.isArray(students) ? students : []);
@@ -103,6 +114,7 @@ router.get('/student/:userId', authenticateToken, requireRole(['instructor', 'ad
     [userId],
     (err, slides) => {
       if (err) {
+        if (isTableMissingError(err)) return res.json([]);
         return res.status(500).json({ error: 'שגיאה בטעינת התקדמות תלמיד' });
       }
       res.json(Array.isArray(slides) ? slides : []);

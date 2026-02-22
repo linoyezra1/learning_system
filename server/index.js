@@ -35,8 +35,8 @@ async function initializeDatabase() {
 
   try {
     console.log('--- Database Initialization Started ---');
-    
-    // 1. Create users table with columns that match app queries (full_name, created_at, last_login)
+
+    console.log('[init] Creating table: users...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -46,37 +46,39 @@ async function initializeDatabase() {
         full_name VARCHAR(255),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
         last_login TIMESTAMP WITH TIME ZONE
-      );
+      )
     `);
+    console.log('[init] Table users OK');
 
-    // Add columns to existing users table (no-op if already present)
-    await pool.query(`
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255);
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
-      ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE;
-    `).catch(() => { /* ignore */ });
+    console.log('[init] Alter table users (add columns if missing)...');
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS full_name VARCHAR(255)').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE').catch(() => {});
+    console.log('[init] Alter users OK');
 
-    // 2. courses (referenced by modules, user_progress, reports context)
+    console.log('[init] Creating table: courses...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS courses (
         id SERIAL PRIMARY KEY,
         title VARCHAR(500) NOT NULL,
         description TEXT,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
+    console.log('[init] Table courses OK');
 
-    // 3. modules (referenced by slides)
+    console.log('[init] Creating table: modules...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS modules (
         id SERIAL PRIMARY KEY,
         course_id INTEGER NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
         title VARCHAR(500) NOT NULL,
         order_index INTEGER DEFAULT 0
-      );
+      )
     `);
+    console.log('[init] Table modules OK');
 
-    // 4. slides (referenced by slide_progress, practice_questions, student_questions)
+    console.log('[init] Creating table: slides...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS slides (
         id SERIAL PRIMARY KEY,
@@ -85,10 +87,11 @@ async function initializeDatabase() {
         content TEXT,
         min_reading_time INTEGER DEFAULT 0,
         order_index INTEGER DEFAULT 0
-      );
+      )
     `);
+    console.log('[init] Table slides OK');
 
-    // 5. slide_progress (per-user per-slide progress)
+    console.log('[init] Creating table: slide_progress...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS slide_progress (
         id SERIAL PRIMARY KEY,
@@ -98,10 +101,11 @@ async function initializeDatabase() {
         completed BOOLEAN DEFAULT FALSE,
         completed_at TIMESTAMP WITH TIME ZONE,
         UNIQUE(user_id, slide_id)
-      );
+      )
     `);
+    console.log('[init] Table slide_progress OK');
 
-    // 6. user_progress (per-user per-course summary)
+    console.log('[init] Creating table: user_progress...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_progress (
         id SERIAL PRIMARY KEY,
@@ -112,10 +116,11 @@ async function initializeDatabase() {
         total_time_spent INTEGER DEFAULT 0,
         last_accessed TIMESTAMP WITH TIME ZONE,
         UNIQUE(user_id, course_id)
-      );
+      )
     `);
+    console.log('[init] Table user_progress OK');
 
-    // 7. practice_questions (quiz questions; routes filter by module_id and/or slide_id)
+    console.log('[init] Creating table: practice_questions...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS practice_questions (
         id SERIAL PRIMARY KEY,
@@ -125,10 +130,11 @@ async function initializeDatabase() {
         options TEXT,
         correct_answer VARCHAR(255),
         explanation TEXT
-      );
+      )
     `);
+    console.log('[init] Table practice_questions OK');
 
-    // 8. student_questions (questions from students to instructor)
+    console.log('[init] Creating table: student_questions...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS student_questions (
         id SERIAL PRIMARY KEY,
@@ -140,10 +146,11 @@ async function initializeDatabase() {
         status VARCHAR(50) DEFAULT 'pending',
         answered_at TIMESTAMP WITH TIME ZONE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
+    console.log('[init] Table student_questions OK');
 
-    // 9. user_answers (answers to practice_questions)
+    console.log('[init] Creating table: user_answers...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS user_answers (
         id SERIAL PRIMARY KEY,
@@ -151,10 +158,11 @@ async function initializeDatabase() {
         question_id INTEGER NOT NULL REFERENCES practice_questions(id) ON DELETE CASCADE,
         answer VARCHAR(255),
         is_correct INTEGER DEFAULT 0
-      );
+      )
     `);
+    console.log('[init] Table user_answers OK');
 
-    // 10. reports (generated report metadata)
+    console.log('[init] Creating table: reports...');
     await pool.query(`
       CREATE TABLE IF NOT EXISTS reports (
         id SERIAL PRIMARY KEY,
@@ -163,27 +171,24 @@ async function initializeDatabase() {
         report_type VARCHAR(100) DEFAULT 'completion',
         expires_at TIMESTAMP WITH TIME ZONE,
         generated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+      )
     `);
+    console.log('[init] Table reports OK');
 
-    // Admin user: hashed password (admin123) and upsert
-    const hashedPw = await bcrypt.hash('admin123', 10); 
-    
-    // UPSERT admin - update password if exists, insert if not - אם המשתמש קיים, הוא מעדכן לו את הסיסמה. אם לא, הוא יוצר אותו.
-    // זה מבטיח שהסיסמה ב-DB תמיד תהיה תואמת להצפנה של השרת הנוכחי
-    const upsertAdminQuery = `
-      INSERT INTO users (username, password, role) 
-      VALUES ($1, $2, $3)
-      ON CONFLICT (username) 
-      DO UPDATE SET password = EXCLUDED.password;
-    `;
+    console.log('[init] Upserting admin user...');
+    const hashedPw = await bcrypt.hash('admin123', 10);
+    await pool.query(
+      `INSERT INTO users (username, password, role) VALUES ($1, $2, $3)
+       ON CONFLICT (username) DO UPDATE SET password = EXCLUDED.password`,
+      ['admin', hashedPw, 'admin']
+    );
+    console.log('[init] Admin user OK');
 
-    await pool.query(upsertAdminQuery, ['admin', hashedPw, 'admin']);
-    
-    console.log('✅ Success: Admin user is ready and password reset to "admin123"');
     console.log('--- Database Initialization Finished ---');
   } catch (err) {
-    console.error('❌ Error during initialization:', err);
+    console.error('❌ Database initialization failed:', err.message || err);
+    console.error('❌ Error code:', err.code);
+    console.error('❌ Full error:', err);
   } finally {
     await pool.end();
   }
@@ -221,8 +226,12 @@ app.all('*', (req, res) => {
 nextApp
   .prepare()
   .then(async () => {
-    if (process.env.DATABASE_URL) {
+    if (!process.env.DATABASE_URL) {
+      console.warn('[startup] DATABASE_URL not set - skipping database initialization');
+    } else {
+      console.log('[startup] Running database initialization (before listen)...');
       await initializeDatabase();
+      console.log('[startup] Database initialization completed');
     }
 
     app.listen(PORT, () => {
