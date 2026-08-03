@@ -93,8 +93,8 @@ export default function StudentDashboard({ user }: { user: any }) {
 
         {/* Course Link */}
         <div className="card">
-          <h2>קורס עזרה ראשונה - חוברת 44</h2>
-          <p style={{ margin: '1rem 0' }}>קורס מקיף בעזרה ראשונה לפי חוברת 44</p>
+          <h2>הקורס שלי</h2>
+          <p style={{ margin: '1rem 0' }}>המשך את הלמידה במערכת המתוקשבת</p>
           <Link href="/course/1" className="btn btn-primary">
             התחל/המשך לימוד
           </Link>

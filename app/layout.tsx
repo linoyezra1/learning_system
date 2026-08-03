@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'מערכת לימוד מתוקשבת - עזרה ראשונה חוברת 44',
-  description: 'מערכת לימוד מתוקשבת לקורס עזרה ראשונה',
+  title: 'מערכת הלמידה המתוקשבת',
+  description: 'התחברות למערכת הלמידה המתוקשבת',
 }
 
 export default function RootLayout({

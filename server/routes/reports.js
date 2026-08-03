@@ -69,7 +69,7 @@ router.get('/completion/:userId', authenticateToken, requireRole(['instructor', 
             doc.fontSize(14);
             doc.text(`שם משתמש: ${user.username}`, { align: 'right' });
             doc.text(`שם מלא: ${user.full_name}`, { align: 'right' });
-            doc.text(`קורס: ${progress?.course_title || 'קורס עזרה ראשונה - חוברת 44'}`, { align: 'right' });
+            doc.text(`קורס: ${progress?.course_title || 'הקורס'}`, { align: 'right' });
             doc.text(`תאריך יצירת הדוח: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, { align: 'right' });
             doc.moveDown();
 

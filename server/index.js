@@ -15,6 +15,7 @@ const progressRoutes = require('./routes/progress');
 const questionsRoutes = require('./routes/questions');
 const reportsRoutes = require('./routes/reports');
 const materialsRoutes = require('./routes/materials');
+const webhooksRoutes = require('./routes/webhooks');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,6 +57,9 @@ async function initializeDatabase() {
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP').catch(() => {});
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login TIMESTAMP WITH TIME ZONE').catch(() => {});
     await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS course_group_id TEXT').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS email VARCHAR(255)').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(50)').catch(() => {});
+    await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS id_number VARCHAR(50)').catch(() => {});
     console.log('[init] Alter users OK');
 
     console.log('[init] Creating table: courses...');
@@ -213,6 +217,8 @@ app.use('/api/progress', progressRoutes);
 app.use('/api/questions', questionsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/materials', materialsRoutes);
+app.use('/api/v1/users', webhooksRoutes);
+app.use('/api/webhooks', webhooksRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

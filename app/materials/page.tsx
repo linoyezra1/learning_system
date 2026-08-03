@@ -23,7 +23,7 @@ export default function MaterialsPage() {
       {
         id: 1,
         title: 'חוברת הקורס המלאה',
-        description: 'חוברת לימוד - קורס עזרה ראשונה',
+        description: 'חוברת הקורס המלאה להורדה והדפסה',
         type: 'pdf',
       },
     ]);

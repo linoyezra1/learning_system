@@ -45,10 +45,7 @@ export default function Login() {
 
   return (
     <div className="card" style={{ maxWidth: '400px', width: '90%' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>מערכת לימוד מתוקשבת</h1>
-      <h2 style={{ textAlign: 'center', marginBottom: '2rem', fontSize: '1.5rem' }}>
-        קורס עזרה ראשונה - חוברת 44
-      </h2>
+      <h1 style={{ textAlign: 'center', marginBottom: '2rem' }}>התחברות למערכת הלמידה המתוקשבת</h1>
 
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: '1.5rem' }}>

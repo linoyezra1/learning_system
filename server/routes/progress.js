@@ -52,7 +52,7 @@ router.get('/my-progress', authenticateToken, (req, res) => {
             completed_slides: completed,
             total_time_spent: timeSpent,
             completion_percentage: pct,
-            course_title: (progress && progress.course_title) || 'קורס עזרה ראשונה - חוברת 44'
+            course_title: (progress && progress.course_title) || 'הקורס שלי'
           });
         }
       );
