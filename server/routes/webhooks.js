@@ -109,19 +109,23 @@ function authenticateWebhook(req, res, next) {
  * Body: fullName, email, phone, idNumber, username, password, courseType
  */
 async function createUserFromWebhook(req, res) {
+  const body = req.body || {};
   const {
     fullName,
     email,
     phone,
-    idNumber,
     username,
     password,
     courseType,
-  } = req.body || {};
+  } = body;
+
+  // Accept both camelCase (idNumber) and snake_case (id_number) from Apps Script / CRM
+  const idNumber = body.idNumber != null ? body.idNumber : body.id_number;
 
   console.log('[webhook] PAYLOAD EXTRACTION:');
   console.log('[webhook]   username:', username);
-  console.log('[webhook]   id_number / idNumber:', idNumber);
+  console.log('[webhook]   idNumber:', idNumber);
+  console.log('[webhook]   id_number (raw):', body.id_number);
   console.log('[webhook]   email:', email);
   console.log('[webhook]   phone:', phone);
   console.log('[webhook]   fullName:', fullName);
