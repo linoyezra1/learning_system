@@ -67,12 +67,12 @@ export default function MyReportsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <header style={{ background: 'white', boxShadow: 'var(--shadow-soft)', padding: '1rem 0' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="container">
           <h1>הדוחות שלי</h1>
           <button onClick={() => router.push('/dashboard')} className="btn btn-secondary">
-            חזור ללוח בקרה
+            חזרה
           </button>
         </div>
       </header>

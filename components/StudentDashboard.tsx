@@ -50,12 +50,12 @@ export default function StudentDashboard({ user }: { user: any }) {
     : 0;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <header style={{ background: 'white', boxShadow: 'var(--shadow-soft)', padding: '1rem 0' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="container">
           <h1>פאנל סטודנט</h1>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <span>שלום, {user.fullName}</span>
+          <div className="header-actions">
+            <span className="header-greeting">שלום, {user.fullName}</span>
             <button onClick={handleLogout} className="btn btn-secondary">התנתק</button>
           </div>
         </div>

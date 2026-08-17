@@ -10,6 +10,7 @@ export default function CourseViewer({ course }: { course: any }) {
   const [slides, setSlides] = useState<any[]>([]);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     if (course.modules && course.modules.length > 0) {
@@ -26,21 +27,34 @@ export default function CourseViewer({ course }: { course: any }) {
       headers: { 'Authorization': `Bearer ${token}` }
     });
     const data = await response.json();
-    setSlides(data);
+    setSlides(Array.isArray(data) ? data : []);
     setCurrentSlideIndex(0);
     setLoading(false);
   };
 
   const handleModuleChange = (module: any) => {
     setSelectedModule(module);
+    setDrawerOpen(false);
     loadSlides(module.id);
+  };
+
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
+
+  const goPrevious = () => {
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex(currentSlideIndex - 1);
+    }
   };
 
   const handleSlideComplete = () => {
     if (currentSlideIndex < slides.length - 1) {
       setCurrentSlideIndex(currentSlideIndex + 1);
     } else {
-      // Check if there are more modules
       const currentModuleIndex = course.modules.findIndex((m: any) => m.id === selectedModule.id);
       if (currentModuleIndex < course.modules.length - 1) {
         const nextModule = course.modules[currentModuleIndex + 1];
@@ -58,73 +72,95 @@ export default function CourseViewer({ course }: { course: any }) {
 
   if (slides.length === 0) {
     return (
-      <div className="container" style={{ padding: '2rem 0' }}>
-        <div className="card">
-          <h2>אין שקפים בנושא זה</h2>
+      <div className="app-shell">
+        <div className="container" style={{ padding: '2rem 0' }}>
+          <div className="card">
+            <h2>אין שקפים בנושא זה</h2>
+          </div>
         </div>
       </div>
     );
   }
 
+  const syllabus = (
+    <>
+      <h3 style={{ marginBottom: '0.75rem' }}>נושאי הקורס</h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
+        {course.modules.map((module: any, index: number) => {
+          const active = selectedModule?.id === module.id;
+          return (
+            <button
+              key={module.id}
+              type="button"
+              onClick={() => handleModuleChange(module)}
+              className={`syllabus-row ${active ? 'active' : ''}`}
+            >
+              <span>{module.title}</span>
+              <span className="syllabus-status">
+                {active ? 'בתהליך' : index === 0 ? 'זמין' : 'נושא'}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </>
+  );
+
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <header style={{ background: 'white', boxShadow: 'var(--shadow-soft)', padding: '1rem 0' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h1>{course.title}</h1>
-          <button onClick={() => router.push('/dashboard')} className="btn btn-secondary">
-            חזור ללוח בקרה
-          </button>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="container">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: 0, flex: 1 }}>
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label="נושאי הקורס"
+              onClick={() => setDrawerOpen(true)}
+            >
+              ☰
+            </button>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>מערכת הלמידה</div>
+              <h1>{course.title}</h1>
+            </div>
+          </div>
+          <div className="header-actions">
+            <button onClick={() => router.push('/dashboard')} className="btn btn-secondary">
+              חזרה
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="container" style={{ padding: '2rem 0' }}>
-        {/* Module Selector */}
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <h3>בחר נושא:</h3>
-          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
-            {course.modules.map((module: any) => (
-              <button
-                key={module.id}
-                onClick={() => handleModuleChange(module)}
-                className={`btn ${selectedModule?.id === module.id ? 'btn-primary' : 'btn-secondary'}`}
-                style={{ fontSize: '0.9rem' }}
-              >
-                {module.title}
-              </button>
-            ))}
+      {drawerOpen && (
+        <div className="drawer-backdrop" onClick={() => setDrawerOpen(false)} />
+      )}
+      <aside className={`syllabus-panel syllabus-mobile-only ${drawerOpen ? 'open' : ''}`}>
+        {syllabus}
+      </aside>
+
+      <div className="container" style={{ padding: '1rem 0' }}>
+        <div className="course-layout">
+          <aside className="syllabus-panel syllabus-desktop">
+            {syllabus}
+          </aside>
+
+          <div className="slide-stage">
+            {slides[currentSlideIndex] && (
+              <SlideViewer
+                slide={slides[currentSlideIndex]}
+                slideIndex={currentSlideIndex}
+                totalSlides={slides.length}
+                moduleTitle={selectedModule?.title}
+                onComplete={handleSlideComplete}
+                canGoNext={currentSlideIndex < slides.length - 1}
+                onPrevious={goPrevious}
+                hasPrevious={currentSlideIndex > 0}
+              />
+            )}
           </div>
         </div>
-
-        {/* Slide Progress */}
-        <div className="card" style={{ marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>שקף {currentSlideIndex + 1} מתוך {slides.length}</span>
-            <span>{selectedModule?.title}</span>
-          </div>
-          <div style={{ marginTop: '0.5rem', height: '8px', background: '#e0e0e0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                height: '100%',
-                width: `${((currentSlideIndex + 1) / slides.length) * 100}%`,
-                background: 'var(--brand-deep)',
-                transition: 'width 0.3s ease'
-              }}
-            />
-          </div>
-        </div>
-
-        {/* Current Slide */}
-        {slides[currentSlideIndex] && (
-          <SlideViewer
-            slide={slides[currentSlideIndex]}
-            onComplete={handleSlideComplete}
-            canGoNext={currentSlideIndex < slides.length - 1}
-            onPrevious={() => currentSlideIndex > 0 && setCurrentSlideIndex(currentSlideIndex - 1)}
-            hasPrevious={currentSlideIndex > 0}
-          />
-        )}
       </div>
     </div>
   );
 }
-

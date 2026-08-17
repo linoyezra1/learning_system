@@ -16,7 +16,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #dffff9 0%, #37e6c4 100%)' }}>
+    <div className="app-shell" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #dffff9 0%, #37e6c4 100%)' }}>
       <Login />
     </div>
   );

@@ -64,12 +64,12 @@ export default function InstructorDashboard({ user }: { user: any }) {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f5f5' }}>
-      <header style={{ background: 'white', boxShadow: 'var(--shadow-soft)', padding: '1rem 0' }}>
-        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="app-shell">
+      <header className="app-header">
+        <div className="container">
           <h1>פאנל מדריך</h1>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-            <span>שלום, {user.fullName}</span>
+          <div className="header-actions">
+            <span className="header-greeting">שלום, {user.fullName}</span>
             <button onClick={handleLogout} className="btn btn-secondary">התנתק</button>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function InstructorDashboard({ user }: { user: any }) {
         {/* Students List */}
         <div className="card">
           <h2>רשימת תלמידים</h2>
-          <div style={{ marginTop: '1.5rem', overflowX: 'auto' }}>
+          <div className="table-wrap" style={{ marginTop: '1.5rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--brand-cream)', borderBottom: '2px solid var(--brand-deep)' }}>
