@@ -9,6 +9,7 @@ export default function InstructorDashboard({ user }: { user: any }) {
   const [students, setStudents] = useState<any[]>([]);
   const [pendingQuestions, setPendingQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -41,23 +42,16 @@ export default function InstructorDashboard({ user }: { user: any }) {
     router.push('/');
   };
 
-  const generateReport = async (userId: number) => {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`/api/reports/completion/${userId}`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-
-    if (response.ok) {
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `report_${userId}_${Date.now()}.pdf`;
-      a.click();
-    } else {
-      alert('שגיאה ביצירת דוח');
-    }
-  };
+  const filteredStudents = students.filter((s: any) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.trim().toLowerCase();
+    return (
+      (s.full_name && s.full_name.toLowerCase().includes(q)) ||
+      (s.username && s.username.toLowerCase().includes(q)) ||
+      (s.phone && s.phone.toLowerCase().includes(q)) ||
+      (s.course_group_id && s.course_group_id.toLowerCase().includes(q))
+    );
+  });
 
   if (loading) {
     return <div className="loading">טוען...</div>;
@@ -99,8 +93,21 @@ export default function InstructorDashboard({ user }: { user: any }) {
 
         {/* Students List */}
         <div className="card">
-          <h2>רשימת תלמידים</h2>
-          <div className="table-wrap" style={{ marginTop: '1.5rem' }}>
+          <h2>רשימת תלמידים ({students.length})</h2>
+          <input
+            type="text"
+            placeholder="חיפוש לפי שם, טלפון או מזהה קורס..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              border: '2px solid var(--border-color)',
+              borderRadius: '8px',
+              marginTop: '1rem',
+            }}
+          />
+          <div className="table-wrap" style={{ marginTop: '1rem' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--brand-cream)', borderBottom: '2px solid var(--brand-deep)' }}>
@@ -110,41 +117,39 @@ export default function InstructorDashboard({ user }: { user: any }) {
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>אחוז השלמה</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>שקפים</th>
                   <th style={{ padding: '0.75rem', textAlign: 'center' }}>זמן</th>
-                  <th style={{ padding: '0.75rem', textAlign: 'center' }}>פעולות</th>
                 </tr>
               </thead>
               <tbody>
-                {students.map((student: any) => {
-                  const completion = student.total_slides > 0
-                    ? ((student.completed_slides / student.total_slides) * 100).toFixed(1)
-                    : 0;
+                {filteredStudents.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--muted)' }}>
+                      {searchQuery.trim() ? 'לא נמצאו תוצאות' : 'אין תלמידים'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredStudents.map((student: any) => {
+                    const completion = student.total_slides > 0
+                      ? ((student.completed_slides / student.total_slides) * 100).toFixed(1)
+                      : 0;
 
-                  return (
-                    <tr key={student.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                      <td style={{ padding: '0.75rem' }}>{student.full_name}</td>
-                      <td style={{ padding: '0.75rem' }}>{student.username}</td>
-                      <td style={{ padding: '0.75rem' }}>{student.course_group_id ?? ''}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold' }}>
-                        {completion}%
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        {student.completed_slides || 0} / {student.total_slides || 0}
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        {Math.floor((student.total_time_spent || 0) / 60)} דק'
-                      </td>
-                      <td style={{ padding: '0.75rem', textAlign: 'center' }}>
-                        <button
-                          onClick={() => generateReport(student.id)}
-                          className="btn btn-primary"
-                          style={{ padding: '0.5rem 1rem', fontSize: '0.9rem' }}
-                        >
-                          צור דוח
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={student.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                        <td style={{ padding: '0.75rem' }}>{student.full_name}</td>
+                        <td style={{ padding: '0.75rem' }}>{student.username}</td>
+                        <td style={{ padding: '0.75rem' }}>{student.course_group_id ?? ''}</td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center', fontWeight: 'bold' }}>
+                          {completion}%
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          {student.completed_slides || 0} / {student.total_slides || 0}
+                        </td>
+                        <td style={{ padding: '0.75rem', textAlign: 'center' }}>
+                          {Math.floor((student.total_time_spent || 0) / 60)} דק'
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
